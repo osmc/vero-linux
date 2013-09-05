@@ -49,6 +49,7 @@
 static unsigned long (*iram_ddr_settings)[2];
 static unsigned long (*normal_mmdc_settings)[2];
 static unsigned long (*iram_iomux_settings)[2];
+
 static void __iomem *mmdc_base;
 static void __iomem *iomux_base;
 static void __iomem *ccm_base;
@@ -306,6 +307,7 @@ int init_mmdc_ddr3_settings(struct platform_device *busfreq_pdev)
 	u32 cpu;
 	struct device_node *node;
 	struct gen_pool *iram_pool;
+	void *iram_addr;
 
 	node = of_find_compatible_node(NULL, NULL, "fsl,imx6q-mmdc-combine");
 	if (!node) {
@@ -437,31 +439,34 @@ int init_mmdc_ddr3_settings(struct platform_device *busfreq_pdev)
 	}
 
 	iomux_settings_size = ARRAY_SIZE(iomux_offsets_mx6q);
-	iram_iomux_settings = (void*)gen_pool_alloc(iram_pool,
+	iram_addr = (void *)gen_pool_alloc(iram_pool,
 						(iomux_settings_size * 8) + 8);
+	iram_iomux_settings = iram_addr;
 	if (!iram_iomux_settings) {
 		dev_err(dev, "unable to alloc iram for IOMUX settings!\n");
 		return -ENOMEM;
 	}
 
 	/*
-	 * Allocate extra space to store the number of entries in the
-	 * ddr_settings plus 4 extra regsiter information that needs
-	 * to be passed to the frequency change code.
-	 * sizeof(iram_ddr_settings) = sizeof(ddr_settings) +
-	 *					entries in ddr_settings + 16.
-	 * The last 4 enties store the addresses of the registers:
-	 * CCM_BASE_ADDR
-	 * MMDC_BASE_ADDR
-	 * IOMUX_BASE_ADDR
-	 * L2X0_BASE_ADDR
-	 */
-	iram_ddr_settings = (void*)gen_pool_alloc(iram_pool,
+	  * Allocate extra space to store the number of entries in the
+	  * ddr_settings plus 4 extra regsiter information that needs
+	  * to be passed to the frequency change code.
+	  * sizeof(iram_ddr_settings) = sizeof(ddr_settings) +
+	  *					entries in ddr_settings + 16.
+	  * The last 4 enties store the addresses of the registers:
+	  * CCM_BASE_ADDR
+	  * MMDC_BASE_ADDR
+	  * IOMUX_BASE_ADDR
+	  * L2X0_BASE_ADDR
+	  */
+	iram_addr = (void *)gen_pool_alloc(iram_pool,
 					(ddr_settings_size * 8) + 8 + 32);
+	iram_ddr_settings = iram_addr;
 	if (!iram_ddr_settings) {
 		dev_err(dev, "unable to alloc iram for ddr settings!\n");
 		return -ENOMEM;
 	}
+
 	i = ddr_settings_size + 1;
 	iram_ddr_settings[i][0] = (unsigned long)mmdc_base;
 	iram_ddr_settings[i+1][0] = (unsigned long)ccm_base;
@@ -489,7 +494,7 @@ int init_mmdc_ddr3_settings(struct platform_device *busfreq_pdev)
 		}
 	}
 
-	ddr_freq_change_iram_base = (void*)gen_pool_alloc(iram_pool,
+	ddr_freq_change_iram_base = (void *)gen_pool_alloc(iram_pool,
 						DDR_FREQ_CHANGE_SIZE);
 	if (!ddr_freq_change_iram_base) {
 		dev_err(dev, "Cannot alloc iram for ddr freq change code!\n");
