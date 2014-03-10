@@ -1892,6 +1892,22 @@ static ssize_t show_disp_dev(struct device *dev,
 }
 static DEVICE_ATTR(fsl_disp_dev_property, S_IRUGO, show_disp_dev, NULL);
 
+static int mxcfb_get_crtc(struct device *dev, struct mxcfb_info *mxcfbi,
+			  enum crtc crtc)
+{
+	int i = 0;
+
+	for (; i < ARRAY_SIZE(ipu_di_crtc_maps); i++)
+		if (ipu_di_crtc_maps[i].crtc == crtc) {
+			mxcfbi->ipu_id = ipu_di_crtc_maps[i].ipu_id;
+			mxcfbi->ipu_di = ipu_di_crtc_maps[i].ipu_di;
+			return 0;
+		}
+
+	dev_err(dev, "failed to get valid crtc\n");
+	return -EINVAL;
+}
+
 static int mxcfb_dispdrv_init(struct platform_device *pdev,
 		struct fb_info *fbi)
 {
@@ -1928,12 +1944,13 @@ static int mxcfb_dispdrv_init(struct platform_device *pdev,
 		mxcfbi->ipu_di_pix_fmt = setting.if_fmt;
 		mxcfbi->default_bpp = setting.default_bpp;
 
-		/* setting */
-		mxcfbi->ipu_id = setting.dev_id;
-		mxcfbi->ipu_di = setting.disp_id;
+		ret = mxcfb_get_crtc(&pdev->dev, mxcfbi, setting.crtc);
+		if (ret)
+			return ret;
+
 		dev_dbg(&pdev->dev, "di_pixfmt:0x%x, bpp:0x%x, di:%d, ipu:%d\n",
 				setting.if_fmt, setting.default_bpp,
-				setting.disp_id, setting.dev_id);
+				mxcfbi->ipu_di, mxcfbi->ipu_id);
 	}
 
 	return ret;
