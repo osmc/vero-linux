@@ -622,7 +622,8 @@ static int mipi_dsi_lcd_init(struct mipi_dsi_info *mipi_dsi,
 	return 0;
 }
 
-static int mipi_dsi_enable(struct mxc_dispdrv_handle *disp)
+static int mipi_dsi_enable(struct mxc_dispdrv_handle *disp,
+			   struct fb_info *fbi)
 {
 	int err;
 	struct mipi_dsi_info *mipi_dsi = mxc_dispdrv_getdata(disp);
@@ -652,7 +653,8 @@ static int mipi_dsi_enable(struct mxc_dispdrv_handle *disp)
 	return 0;
 }
 
-static void mipi_dsi_disable(struct mxc_dispdrv_handle *disp)
+static void mipi_dsi_disable(struct mxc_dispdrv_handle *disp,
+			    struct fb_info *fbi)
 {
 	struct mipi_dsi_info *mipi_dsi = mxc_dispdrv_getdata(disp);
 
