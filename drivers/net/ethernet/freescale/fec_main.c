@@ -3422,6 +3422,7 @@ fec_drv_remove(struct platform_device *pdev)
 	if (fep->ptp_clock)
 		ptp_clock_unregister(fep->ptp_clock);
 	of_node_put(fep->phy_node);
+	fec_enet_clk_enable(ndev, false);
 	free_netdev(ndev);
 
 	return 0;
@@ -3447,6 +3448,7 @@ static int __maybe_unused fec_suspend(struct device *dev)
 			pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 	}
 	rtnl_unlock();
+	fec_enet_clk_enable(ndev, false);
 
 	if (fep->reg_phy && !(fep->wol_flag & FEC_WOL_FLAG_ENABLE))
 		regulator_disable(fep->reg_phy);
