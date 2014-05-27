@@ -3449,6 +3449,7 @@ static int __maybe_unused fec_suspend(struct device *dev)
 	}
 	rtnl_unlock();
 	fec_enet_clk_enable(ndev, false);
+	pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 
 	if (fep->reg_phy && !(fep->wol_flag & FEC_WOL_FLAG_ENABLE))
 		regulator_disable(fep->reg_phy);
@@ -3477,6 +3478,7 @@ static int __maybe_unused fec_resume(struct device *dev)
 	}
 
 	rtnl_lock();
+	pinctrl_pm_select_default_state(&fep->pdev->dev);
 	if (netif_running(ndev)) {
 		ret = fec_enet_clk_enable(ndev, true);
 		if (ret) {
