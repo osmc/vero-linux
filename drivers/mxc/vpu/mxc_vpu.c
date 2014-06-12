@@ -18,6 +18,7 @@
  *
  * @ingroup VPU
  */
+
 #include <linux/kernel.h>
 #include <linux/mm.h>
 #include <linux/interrupt.h>
@@ -961,13 +962,13 @@ static int vpu_dev_probe(struct platform_device *pdev)
 		goto err_out_class;
 	}
 
-	vpu_clk = clk_get(&pdev->dev, "per");
+	vpu_clk = clk_get(&pdev->dev, "vpu_clk");
 	if (IS_ERR(vpu_clk)) {
 		err = -ENOENT;
 		goto err_out_class;
 	}
 
-	vpu_ipi_irq = platform_get_irq_byname(pdev, "bit");
+	vpu_ipi_irq = platform_get_irq_byname(pdev, "vpu_ipi_irq");
 	if (vpu_ipi_irq < 0) {
 		dev_err(vpu_dev, "vpu: unable to get vpu interrupt\n");
 		err = -ENXIO;
@@ -989,7 +990,7 @@ static int vpu_dev_probe(struct platform_device *pdev)
 	}
 
 #ifdef MXC_VPU_HAS_JPU
-	vpu_jpu_irq = platform_get_irq_byname(pdev, "jpeg");
+	vpu_jpu_irq = platform_get_irq_byname(pdev, "vpu_jpu_irq");
 	if (vpu_jpu_irq < 0) {
 		dev_err(vpu_dev, "vpu: unable to get vpu jpu interrupt\n");
 		err = -ENXIO;
