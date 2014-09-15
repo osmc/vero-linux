@@ -17,6 +17,7 @@
 #include <linux/net_tstamp.h>
 #include <linux/ptp_clock_kernel.h>
 #include <linux/timecounter.h>
+#include <linux/pm_qos.h>
 
 #if defined(CONFIG_M523x) || defined(CONFIG_M527x) || defined(CONFIG_M528x) || \
     defined(CONFIG_M520x) || defined(CONFIG_M532x) || \
@@ -428,6 +429,12 @@ struct bufdesc_ex {
 #define FEC_QUIRK_BUG_CAPTURE		(1 << 10)
 /* Controller has only one MDIO bus */
 #define FEC_QUIRK_SINGLE_MDIO		(1 << 11)
+/*
+ * i.MX6Q/DL ENET cannot wake up system in wait mode because ENET tx & rx
+ * interrupt signal don't connect to GPC. So use pm qos to avoid cpu enter
+ * to wait mode.
+ */
+#define FEC_QUIRK_BUG_WAITMODE		(1 << 12)
 
 struct fec_enet_priv_tx_q {
 	int index;
@@ -505,6 +512,7 @@ struct fec_enet_private {
 	struct	mii_bus *mii_bus;
 	struct	phy_device *phy_dev;
 	int	mii_timeout;
+	int	mii_bus_share;
 	uint	phy_speed;
 	phy_interface_t	phy_interface;
 	struct device_node *phy_node;
@@ -525,6 +533,7 @@ struct fec_enet_private {
 
 	struct ptp_clock *ptp_clock;
 	struct ptp_clock_info ptp_caps;
+	struct pm_qos_request pm_qos_req;
 	unsigned long last_overflow_check;
 	spinlock_t tmreg_lock;
 	struct cyclecounter cc;
