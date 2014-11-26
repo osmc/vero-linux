@@ -2250,6 +2250,8 @@ OnError:
         /* Free LINUX_MDL. */
         gcmkVERIFY_OK(_DestroyMdl(mdl));
     }
+    *Physical = gcvNULL;
+    *Bytes = 0;
 
     if (locked)
     {
@@ -4145,6 +4147,7 @@ OnError:
         /* Free the memory. */
         _DestroyMdl(mdl);
     }
+    *Physical = gcvNULL;
 
     if (locked)
     {
