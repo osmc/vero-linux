@@ -2084,10 +2084,6 @@ gckOS_AllocateNonPagedMemory(
 
     mdl->addr = addr;
 
-    /* Return allocated memory. */
-    *Bytes = bytes;
-    *Physical = (gctPHYS_ADDR) mdl;
-
     if (InUserSpace)
     {
         mdlMap = _CreateMdlMap(mdl, _GetProcessID());
@@ -2219,6 +2215,10 @@ gckOS_AllocateNonPagedMemory(
     }
 
     MEMORY_UNLOCK(Os);
+
+    /* Return allocated memory. */
+    *Bytes = bytes;
+    *Physical = (gctPHYS_ADDR) mdl;
 
     /* Success. */
     gcmkFOOTER_ARG("*Bytes=%lu *Physical=0x%X *Logical=0x%X",
@@ -4081,9 +4081,6 @@ gckOS_AllocatePagedMemoryEx(
         }
     }
 
-    /* Return physical address. */
-    *Physical = (gctPHYS_ADDR) mdl;
-
     /*
      * Add this to a global list.
      * Will be used by get physical address
@@ -4103,6 +4100,9 @@ gckOS_AllocatePagedMemoryEx(
     }
 
     MEMORY_UNLOCK(Os);
+
+    /* Return physical address. */
+    *Physical = (gctPHYS_ADDR) mdl;
 
     /* Success. */
     gcmkFOOTER_ARG("*Physical=0x%X", *Physical);
