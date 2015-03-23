@@ -1,0 +1,2 @@
+config MXC_IPU_V3_FSL
+	bool

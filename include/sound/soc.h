@@ -28,6 +28,18 @@
 #include <sound/control.h>
 #include <sound/ac97_codec.h>
 
+/*enum snd_soc_control_type {
+	SND_SOC_CUSTOM,
+	SND_SOC_I2C,
+	SND_SOC_SPI,
+};*/
+
+enum snd_soc_control_type {
+        SND_SOC_I2C = 1,
+        SND_SOC_SPI,
+        SND_SOC_REGMAP,
+};
+
 /*
  * Convenience kcontrol builders
  */
@@ -805,16 +817,24 @@ struct snd_soc_codec {
 
 	struct list_head list;
 	struct list_head card_list;
+	int (*volatile_register)(struct snd_soc_codec *, unsigned int);
 
 	/* runtime */
 	unsigned int cache_bypass:1; /* Suppress access to the cache */
 	unsigned int suspended:1; /* Codec is in suspend PM state */
 	unsigned int cache_init:1; /* codec cache has been initialized */
+	unsigned int using_regmap:1; /* using regmap access */
+	u32 cache_only;  /* Suppress writes to hardware */
+	u32 cache_sync; /* Cache needs to be synced to hardware */
 
 	/* codec IO */
 	void *control_data; /* codec control (i2c/3wire) data */
 	hw_write_t hw_write;
+	unsigned int (*read)(struct snd_soc_codec *, unsigned int);
+	int (*write)(struct snd_soc_codec *, unsigned int, unsigned int);
 	void *reg_cache;
+	struct mutex cache_rw_mutex;
+	int val_bytes;
 
 	/* component */
 	struct snd_soc_component component;

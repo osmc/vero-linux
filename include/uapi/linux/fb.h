@@ -220,11 +220,19 @@ struct fb_bitfield {
 #define FB_VMODE_INTERLACED	1	/* interlaced	*/
 #define FB_VMODE_DOUBLE		2	/* double scan */
 #define FB_VMODE_ODD_FLD_FIRST	4	/* interlaced: top line first */
-#define FB_VMODE_MASK		255
+/*
+ * mxc_edid is taking 16 and 32 for ASPECT_16_9/4_3
+ */
+#define FB_VMODE_3D_SBS_HALF	128     /* HDMI_3D_STRUCTURE_SIDE_BY_SIDE_HALF */
+#define FB_VMODE_3D_SBS_FULL	256     /* HDMI_3D_STRUCTURE_SIDE_BY_SIDE_FULL */
+#define FB_VMODE_3D_TOP_BOTTOM	512     /* HDMI_3D_STRUCTURE_TOP_AND_BOTTOM */
+#define FB_VMODE_3D_FRAME_PACK	1024    /* HDMI_3D_STRUCTURE_FRAME_PACKING */
+#define FB_VMODE_3D_MASK	1920
+#define FB_VMODE_MASK		2047
 
-#define FB_VMODE_YWRAP		256	/* ywrap instead of panning     */
-#define FB_VMODE_SMOOTH_XPAN	512	/* smooth xpan possible (internally used) */
-#define FB_VMODE_CONUPDATE	512	/* don't update x/yoffset	*/
+#define FB_VMODE_YWRAP		2048	/* ywrap instead of panning     */
+#define FB_VMODE_SMOOTH_XPAN	4096	/* smooth xpan possible (internally used) */
+#define FB_VMODE_CONUPDATE	4096	/* don't update x/yoffset	*/
 
 /*
  * Display rotation support

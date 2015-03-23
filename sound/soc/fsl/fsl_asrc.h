@@ -326,7 +326,7 @@ enum asrc_outclk {
 	OUTCLK_ASRCK1_CLK = 0x0f,
 };
 
-#define ASRC_CLK_MAX_NUM	16
+#define ASRC_CLK_MAX_NUM	1
 
 enum asrc_word_width {
 	ASRC_WIDTH_24_BIT = 0,

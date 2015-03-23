@@ -1,0 +1,6 @@
+config DRM_VIVANTE
+        tristate "Vivante GCCore"
+        depends on DRM
+        help
+          Choose this option if you have a Vivante graphics card.
+          If M is selected, the module will be called vivante.

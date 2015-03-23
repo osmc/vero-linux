@@ -494,7 +494,7 @@ static int get_est_timing(unsigned char *block, struct fb_videomode *mode)
 static int get_std_timing(unsigned char *block, struct fb_videomode *mode,
 			  int ver, int rev, const struct fb_monspecs *specs)
 {
-	int i;
+	int xres, yres = 0, refresh, ratio, i;
 
 	for (i = 0; i < DMT_SIZE; i++) {
 		u32 std_2byte_code = block[0] << 8 | block[1];

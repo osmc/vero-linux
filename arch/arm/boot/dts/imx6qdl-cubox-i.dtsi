@@ -45,11 +45,22 @@
 #include <dt-bindings/gpio/gpio.h>
 
 / {
+	chosen {
+		bootargs = "quiet console=ttymxc0,115200 root=/dev/mmcblk0p2 rw";
+	};
+
+	aliases {
+		mmc0 = &usdhc2;
+		mmc1 = &usdhc1;
+		mxcfb0 = &mxcfb1;
+	};
+
 	ir_recv: ir-receiver {
 		compatible = "gpio-ir-receiver";
 		gpios = <&gpio3 9 1>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_cubox_i_ir>;
+		linux,rc-map-name = "rc-rc6-mce";
 	};
 
 	pwmleds {
@@ -78,6 +89,8 @@
 
 		reg_usbh1_vbus: usb-h1-vbus {
 			compatible = "regulator-fixed";
+			regulator-boot-on;
+			regulator-always-on;
 			enable-active-high;
 			gpio = <&gpio1 0 0>;
 			pinctrl-names = "default";
@@ -89,6 +102,8 @@
 
 		reg_usbotg_vbus: usb-otg-vbus {
 			compatible = "regulator-fixed";
+			regulator-boot-on;
+			regulator-always-on;
 			enable-active-high;
 			gpio = <&gpio3 22 0>;
 			pinctrl-names = "default";
@@ -101,8 +116,7 @@
 
 	sound-spdif {
 		compatible = "fsl,imx-audio-spdif";
-		model = "Integrated SPDIF";
-		/* IMX6 doesn't implement this yet */
+		model = "imx-spdif";
 		spdif-controller = <&spdif>;
 		spdif-out;
 	};
@@ -118,12 +132,45 @@
 			linux,code = <BTN_0>;
 		};
 	};
+
+	sound-hdmi {
+		compatible = "fsl,imx6q-audio-hdmi",
+			     "fsl,imx-audio-hdmi";
+		model = "imx-audio-hdmi";
+		hdmi-controller = <&hdmi_audio>;
+	};
+
+	mxcfb1: fb@0 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		mode_str ="1920x1080M@60";
+		default_bpp = <32>;
+		int_clk = <0>;
+		late_init = <0>;
+		status = "okay";
+	};
 };
 
-&hdmi {
+&hdmi_core {
+	ipu_id = <0>;
+	disp_id = <0>;
+	status = "okay";
+};
+
+&hdmi_video {
+	fsl,phy_reg_vlev = <0x0294>;
+	fsl,phy_reg_cksymtx = <0x800d>;
+	status = "okay";
+};
+
+&hdmi_audio {
+	status = "okay";
+};
+
+&hdmi_cec {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_cubox_i_hdmi>;
-	ddc-i2c-bus = <&i2c2>;
 	status = "okay";
 };
 
@@ -131,7 +178,13 @@
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_cubox_i_i2c2>;
+
 	status = "okay";
+
+	ddc: imx6_hdmi_i2c@50 {
+		compatible = "fsl,imx6-hdmi-i2c";
+		reg = <0x50>;
+	};
 };
 
 &i2c3 {
@@ -260,5 +313,13 @@
 	pinctrl-0 = <&pinctrl_cubox_i_usdhc2_aux &pinctrl_cubox_i_usdhc2>;
 	vmmc-supply = <&reg_3p3v>;
 	cd-gpios = <&gpio1 4 0>;
+	status = "okay";
+};
+
+&gpc {
+	fsl,cpu_pupscr_sw2iso = <0xf>;
+	fsl,cpu_pupscr_sw = <0xf>;
+	fsl,cpu_pdnscr_iso2sw = <0x1>;
+	fsl,cpu_pdnscr_iso = <0x1>;
 	status = "okay";
 };

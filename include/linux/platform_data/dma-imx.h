@@ -17,31 +17,30 @@
  * This enumerates peripheral types. Used for SDMA.
  */
 enum sdma_peripheral_type {
-	IMX_DMATYPE_SSI,	/* MCU domain SSI */
-	IMX_DMATYPE_SSI_SP,	/* Shared SSI */
-	IMX_DMATYPE_MMC,	/* MMC */
-	IMX_DMATYPE_SDHC,	/* SDHC */
-	IMX_DMATYPE_UART,	/* MCU domain UART */
-	IMX_DMATYPE_UART_SP,	/* Shared UART */
-	IMX_DMATYPE_FIRI,	/* FIRI */
-	IMX_DMATYPE_CSPI,	/* MCU domain CSPI */
-	IMX_DMATYPE_CSPI_SP,	/* Shared CSPI */
-	IMX_DMATYPE_SIM,	/* SIM */
-	IMX_DMATYPE_ATA,	/* ATA */
-	IMX_DMATYPE_CCM,	/* CCM */
-	IMX_DMATYPE_EXT,	/* External peripheral */
-	IMX_DMATYPE_MSHC,	/* Memory Stick Host Controller */
-	IMX_DMATYPE_MSHC_SP,	/* Shared Memory Stick Host Controller */
-	IMX_DMATYPE_DSP,	/* DSP */
-	IMX_DMATYPE_MEMORY,	/* Memory */
-	IMX_DMATYPE_FIFO_MEMORY,/* FIFO type Memory */
-	IMX_DMATYPE_SPDIF,	/* SPDIF */
-	IMX_DMATYPE_IPU_MEMORY,	/* IPU Memory */
-	IMX_DMATYPE_ASRC,	/* ASRC */
-	IMX_DMATYPE_ESAI,	/* ESAI */
-	IMX_DMATYPE_SSI_DUAL,	/* SSI Dual FIFO */
-	IMX_DMATYPE_ASRC_SP,	/* Shared ASRC */
-	IMX_DMATYPE_SAI,	/* SAI */
+        IMX_DMATYPE_SSI,        /* MCU domain SSI */
+        IMX_DMATYPE_SSI_SP,     /* Shared SSI */
+        IMX_DMATYPE_MMC,        /* MMC */
+        IMX_DMATYPE_SDHC,       /* SDHC */
+        IMX_DMATYPE_UART,       /* MCU domain UART */
+        IMX_DMATYPE_UART_SP,    /* Shared UART */
+        IMX_DMATYPE_FIRI,       /* FIRI */
+        IMX_DMATYPE_CSPI,       /* MCU domain CSPI */
+        IMX_DMATYPE_CSPI_SP,    /* Shared CSPI */
+        IMX_DMATYPE_SIM,        /* SIM */
+        IMX_DMATYPE_ATA,        /* ATA */
+        IMX_DMATYPE_CCM,        /* CCM */
+        IMX_DMATYPE_EXT,        /* External peripheral */
+        IMX_DMATYPE_MSHC,       /* Memory Stick Host Controller */
+        IMX_DMATYPE_MSHC_SP,    /* Shared Memory Stick Host Controller */
+        IMX_DMATYPE_DSP,        /* DSP */
+        IMX_DMATYPE_MEMORY,     /* Memory */
+        IMX_DMATYPE_FIFO_MEMORY,/* FIFO type Memory */
+        IMX_DMATYPE_SPDIF,      /* SPDIF */
+        IMX_DMATYPE_IPU_MEMORY, /* IPU Memory */
+        IMX_DMATYPE_ASRC,       /* ASRC */
+        IMX_DMATYPE_ESAI,       /* ESAI */
+        IMX_DMATYPE_SSI_DUAL,   /* SSI Dual FIFO */
+        IMX_DMATYPE_HDMI,       /* HDMI Audio */
 };
 
 enum imx_dma_prio {
@@ -55,6 +54,7 @@ struct imx_dma_data {
 	int dma_request2; /* secondary DMA request line */
 	enum sdma_peripheral_type peripheral_type;
 	int priority;
+	void *data_addr1, *data_addr2;
 };
 
 static inline int imx_dma_is_ipu(struct dma_chan *chan)
