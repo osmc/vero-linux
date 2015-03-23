@@ -119,6 +119,12 @@ static int mode_string(char *buf, unsigned int offset,
 		v = 'i';
 	if (mode->vmode & FB_VMODE_DOUBLE)
 		v = 'd';
+	if (mode->vmode & FB_VMODE_3D_SBS_HALF)
+		m = 'H';
+	if (mode->vmode & FB_VMODE_3D_TOP_BOTTOM)
+		m = 'T';
+	if (mode->vmode & FB_VMODE_3D_FRAME_PACK)
+		m = 'F';
 
 	return snprintf(&buf[offset], PAGE_SIZE - offset, "%c:%dx%d%c-%d\n",
 	                m, mode->xres, mode->yres, v, mode->refresh);

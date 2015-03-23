@@ -57,3 +57,7 @@
 	fsl,transmit-atten-16ths = <9>;
 	fsl,receive-eq-mdB = <3000>;
 };
+
+&sgtl5000 {
+	status = "okay";
+};

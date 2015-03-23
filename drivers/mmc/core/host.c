@@ -451,7 +451,6 @@ int mmc_of_parse(struct mmc_host *host)
 
 	return mmc_pwrseq_alloc(host);
 }
-
 EXPORT_SYMBOL(mmc_of_parse);
 
 /**

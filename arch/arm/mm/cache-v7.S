@@ -446,3 +446,5 @@ ENDPROC(v7_dma_unmap_area)
 
 	@ define struct cpu_cache_fns (see <asm/cacheflush.h> and proc-macros.S)
 	define_cache_functions v7
+
+	.long	v7_dma_flush_range
