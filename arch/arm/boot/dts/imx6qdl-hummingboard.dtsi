@@ -101,6 +101,7 @@
 		model = "On-board Codec";
 		mux-ext-port = <5>;
 		mux-int-port = <1>;
+		cpu-dai = <&ssi1>;
 		ssi-controller = <&ssi1>;
 	};
 
