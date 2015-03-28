@@ -274,6 +274,16 @@
 			fsl,pins = <MX6QDL_PAD_DISP0_DAT8__PWM1_OUT 0x1b0b1>;
 		};
 
+		pinctrl_hummingboard_sgtl5000: hummingboard-sgtl5000 {
+			fsl,pins = <
+				MX6QDL_PAD_DISP0_DAT19__AUD5_RXD 0x130b0 /*brk*/
+				MX6QDL_PAD_KEY_COL0__AUD5_TXC 0x130b0 /*ok*/
+				MX6QDL_PAD_KEY_ROW0__AUD5_TXD 0x110b0 /*brk*/
+				MX6QDL_PAD_KEY_COL1__AUD5_TXFS 0x130b0 /*ok*/
+				MX6QDL_PAD_GPIO_5__CCM_CLKO1 0x130b0
+			>;
+		};
+
 		pinctrl_hummingboard_spdif: hummingboard-spdif {
 			fsl,pins = <MX6QDL_PAD_GPIO_17__SPDIF_OUT 0x13091>;
 		};

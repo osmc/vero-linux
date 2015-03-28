@@ -800,6 +800,10 @@ static int ldo_regulator_disable(struct regulator_dev *dev)
 dev_info(codec->dev, "%s(): enabled %u\n", __func__, ldo->enabled);
 
 	snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
+				SGTL5000_LINREG_SIMPLE_POWERUP,
+				SGTL5000_LINREG_SIMPLE_POWERUP);
+
+	snd_soc_update_bits(codec, SGTL5000_CHIP_ANA_POWER,
 				SGTL5000_LINEREG_D_POWERUP,
 				0);
 dev_info(codec->dev, "%s: ANA_POWER = 0x%04x\n", __func__, snd_soc_read(codec, SGTL5000_CHIP_ANA_POWER));
