@@ -13,11 +13,13 @@
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
+#include <linux/clk.h>
 #include <linux/completion.h>
 #include <linux/device.h>
 #include <linux/delay.h>
 #include <linux/pagemap.h>
 #include <linux/err.h>
+#include <linux/gpio/consumer.h>
 #include <linux/leds.h>
 #include <linux/scatterlist.h>
 #include <linux/log2.h>
@@ -1633,6 +1635,9 @@ static void mmc_card_power_up(struct mmc_host *host)
 			gpiod_set_value(gds[i], 0);
 		}
 	}
+
+	/* 2ms delay to after reset release */
+	mmc_delay(20);
 }
 
 /*
@@ -1694,6 +1699,9 @@ void mmc_power_off(struct mmc_host *host)
 {
 	if (host->ios.power_mode == MMC_POWER_OFF)
 		return;
+
+	/* Power up the card/module first, if needed */
+	mmc_card_power_up(host);
 
 	mmc_host_clk_hold(host);
 
