@@ -318,7 +318,7 @@ int mmc_of_parse(struct mmc_host *host)
 {
 	struct device_node *np;
 	u32 bus_width;
-	int i, len, ret;
+	int len, ret;
 	bool cd_cap_invert, cd_gpio_invert = false;
 	bool ro_cap_invert, ro_gpio_invert = false;
 
@@ -407,30 +407,6 @@ int mmc_of_parse(struct mmc_host *host)
 	/* See the comment on CD inversion above */
 	if (ro_cap_invert ^ ro_gpio_invert)
 		host->caps2 |= MMC_CAP2_RO_ACTIVE_HIGH;
-
-	/* Parse card power/reset/clock control */
-	if (of_find_property(np, "card-reset-gpios", NULL)) {
-		struct gpio_desc *gpd;
-		for (i = 0; i < ARRAY_SIZE(host->card_reset_gpios); i++) {
-			gpd = devm_gpiod_get_index(host->parent, "card-reset", i);
-			if (IS_ERR(gpd))
-				break;
-			gpiod_direction_output(gpd, 0);
-			host->card_reset_gpios[i] = gpd;
-		}
-
-		gpd = devm_gpiod_get_index(host->parent, "card-reset", ARRAY_SIZE(host->card_reset_gpios));
-		if (!IS_ERR(gpd)) {
-			dev_warn(host->parent, "More reset gpios than we can handle");
-			gpiod_put(gpd);
-		}
-	}
-
-	host->card_clk = of_clk_get_by_name(np, "card_ext_clock");
-	if (IS_ERR(host->card_clk))
-		host->card_clk = NULL;
-
-	host->card_regulator = regulator_get(host->parent, "card-external-vcc");
 
 	if (of_find_property(np, "cap-sd-highspeed", &len))
 		host->caps |= MMC_CAP_SD_HIGHSPEED;
@@ -620,6 +596,10 @@ EXPORT_SYMBOL(mmc_alloc_host);
 int mmc_add_host(struct mmc_host *host)
 {
 	int err;
+
+	err = mmc_of_parse_child(host);
+	if (err)
+		return err;
 
 	WARN_ON((host->caps & MMC_CAP_SDIO_IRQ) &&
 		!host->ops->enable_sdio_irq);
