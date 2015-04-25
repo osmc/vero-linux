@@ -234,6 +234,16 @@ struct fb_bitfield {
 #define FB_VMODE_SMOOTH_XPAN	4096	/* smooth xpan possible (internally used) */
 #define FB_VMODE_CONUPDATE	4096	/* don't update x/yoffset	*/
 
+#define FB_VMODE_ASPECT_1	BIT(13)
+#define FB_VMODE_ASPECT_4_3	BIT(4)
+#define FB_VMODE_ASPECT_5_4	BIT(14)
+#define FB_VMODE_ASPECT_16_9	BIT(5)
+#define FB_VMODE_ASPECT_16_10	BIT(15)
+#define FB_VMODE_ASPECT_MASK	(BIT(4) | \
+				 BIT(5) | \
+				 BIT(13) | \
+				 BIT(14) | \
+				 BIT(15))
 /*
  * Display rotation support
  */

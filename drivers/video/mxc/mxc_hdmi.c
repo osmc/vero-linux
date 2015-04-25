@@ -2085,11 +2085,16 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 				mode->vmode |= FB_VMODE_ASPECT_4_3;
 		}
 
-		dev_dbg(&hdmi->pdev->dev, "Added mode: %d, vic: %d", i, vic);
-		dev_dbg(&hdmi->pdev->dev,
-			"xres = %d, yres = %d, freq = %d, vmode = %d, flag = %d\n",
+		dev_info(&hdmi->pdev->dev, "Added mode: %d, vic: %d", i, vic);
+		dev_info(&hdmi->pdev->dev,
+			"xres = %d, yres = %d, ratio = %s, freq = %d, vmode = %d, flag = %d\n",
 			hdmi->fbi->monspecs.modedb[i].xres,
 			hdmi->fbi->monspecs.modedb[i].yres,
+			mode->vmode & FB_VMODE_ASPECT_1 ? "1" :
+			    mode->vmode & FB_VMODE_ASPECT_4_3 ? "4/3" :
+			    mode->vmode & FB_VMODE_ASPECT_5_4 ? "5/4" :
+			    mode->vmode & FB_VMODE_ASPECT_16_10 ? "16/10" :
+			    mode->vmode & FB_VMODE_ASPECT_16_9 ? "16/9" : "n/a",
 			hdmi->fbi->monspecs.modedb[i].refresh,
 			hdmi->fbi->monspecs.modedb[i].vmode,
 			hdmi->fbi->monspecs.modedb[i].flag);

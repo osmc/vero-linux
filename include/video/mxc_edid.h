@@ -28,10 +28,6 @@
 
 #include <linux/fb.h>
 
-#define FB_VMODE_ASPECT_4_3	0x10
-#define FB_VMODE_ASPECT_16_9	0x20
-#define FB_VMODE_ASPECT_MASK	(FB_VMODE_ASPECT_4_3 | FB_VMODE_ASPECT_16_9)
-
 enum cea_audio_coding_types {
 	AUDIO_CODING_TYPE_REF_STREAM_HEADER	=  0,
 	AUDIO_CODING_TYPE_LPCM			=  1,
