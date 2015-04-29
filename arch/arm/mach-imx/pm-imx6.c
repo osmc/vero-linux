@@ -579,6 +579,24 @@ static void __init imx6_pm_common_init(const struct imx6_pm_socdata
 				   IMX6Q_GPR1_GINT);
 }
 
+void __init imx6_pm_ccm_init(const char *ccm_compat)
+{
+	struct device_node *np;
+	u32 val;
+
+	np = of_find_compatible_node(NULL, NULL, ccm_compat);
+	ccm_base = of_iomap(np, 0);
+	BUG_ON(!ccm_base);
+
+	/*
+	 * Initialize CCM_CLPCR_LPM into RUN mode to avoid ARM core
+	 * clock being shut down unexpectedly by WAIT mode.
+	 */
+	val = readl_relaxed(ccm_base + CLPCR);
+	val &= ~BM_CLPCR_LPM;
+	writel_relaxed(val, ccm_base + CLPCR);
+}
+
 void __init imx6q_pm_init(void)
 {
 	imx6_pm_common_init(&imx6q_pm_data);
