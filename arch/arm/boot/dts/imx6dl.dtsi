@@ -71,12 +71,6 @@
 			fsl,max_ddr_freq = <400000000>;
 		};
 
-		ocram: sram@00900000 {
-			compatible = "mmio-sram";
-			reg = <0x00900000 0x20000>;
-			clocks = <&clks IMX6QDL_CLK_OCRAM>;
-		};
-
 		gpu@00130000 {
 			compatible = "fsl,imx6dl-gpu", "fsl,imx6q-gpu";
 			reg = <0x00130000 0x4000>, <0x00134000 0x4000>,
@@ -127,6 +121,24 @@
 			compatible = "fsl,imx6q-hdmi-cec";
 			interrupts = <0 115 0x04>;
 			status = "disabled";
+		};
+
+		ocrams: sram@00900000 {
+			compatible = "fsl,lpm-sram";
+			reg = <0x00900000 0x4000>;
+			clocks = <&clks IMX6QDL_CLK_OCRAM>;
+		};
+
+		ocrams_ddr: sram@00904000 {
+			compatible = "fsl,ddr-lpm-sram";
+			reg = <0x00904000 0x1000>;
+			clocks = <&clks IMX6QDL_CLK_OCRAM>;
+		};
+
+		ocram: sram@00905000 {
+			compatible = "mmio-sram";
+			reg = <0x00905000 0x1B000>;
+			clocks = <&clks IMX6QDL_CLK_OCRAM>;
 		};
 
 		aips1: aips-bus@02000000 {
