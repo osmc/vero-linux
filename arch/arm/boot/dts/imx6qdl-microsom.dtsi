@@ -41,21 +41,16 @@
  */
 #include <dt-bindings/gpio/gpio.h>
 / {
+	clk_sdio: sdio-clock {
+		compatible = "gpio-gate-clock";
+		#clock-cells = <0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_microsom_brcm_osc>;
+		enable-gpios = <&gpio5 5 GPIO_ACTIVE_HIGH>;
+	};
+
 	regulators {
 		compatible = "simple-bus";
-
-		reg_brcm_osc: brcm-osc-reg {
-			compatible = "regulator-fixed";
-			enable-active-high;
-			gpio = <&gpio5 5 0>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&pinctrl_microsom_brcm_osc_reg>;
-			regulator-name = "brcm_osc_reg";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-always-on;
-			regulator-boot-on;
-		};
 
 		reg_brcm: brcm-reg {
 			compatible = "regulator-fixed";
@@ -69,6 +64,14 @@
 			startup-delay-us = <200000>;
 		};
 	};
+
+	usdhc1_pwrseq: usdhc1_pwrseq {
+		compatible = "mmc-pwrseq-simple";
+		reset-gpios = <&gpio5 26 GPIO_ACTIVE_LOW>,
+			      <&gpio6 0 GPIO_ACTIVE_LOW>;
+		clocks = <&clk_sdio>;
+		clock-names = "ext_clock";
+	};
 };
 
 &iomuxc {
@@ -81,7 +84,7 @@
 			>;
 		};
 
-		pinctrl_microsom_brcm_osc_reg: microsom-brcm-osc-reg {
+		pinctrl_microsom_brcm_osc: microsom-brcm-osc {
 			fsl,pins = <
 				MX6QDL_PAD_DISP0_DAT11__GPIO5_IO05	0x40013070
 			>;
@@ -109,7 +112,7 @@
 			>;
 		};
 
-		pinctrl_microsom_uart4_1: microsom-uart4 {
+		pinctrl_microsom_uart4: microsom-uart4 {
 			fsl,pins = <
 				MX6QDL_PAD_CSI0_DAT12__UART4_TX_DATA 0x1b0b1
 				MX6QDL_PAD_CSI0_DAT13__UART4_RX_DATA 0x1b0b1
@@ -140,19 +143,19 @@
 /* UART4 - Connected to optional BRCM Wifi/BT/FM */
 &uart4 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_microsom_brcm_bt &pinctrl_microsom_uart4_1>;
+	pinctrl-0 = <&pinctrl_microsom_brcm_bt &pinctrl_microsom_uart4>;
 	fsl,uart-has-rtscts;
 	status = "okay";
 };
 
 /* USDHC1 - Connected to optional BRCM Wifi/BT/FM */
 &usdhc1 {
-	card-external-vcc-supply = <&reg_brcm>;
-	card-reset-gpios = <&gpio5 26 GPIO_ACTIVE_LOW>, <&gpio6 0 GPIO_ACTIVE_LOW>;
-	keep-power-in-suspend;
-	non-removable;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_microsom_brcm_wifi &pinctrl_microsom_usdhc1>;
+	bus-width = <4>;
+	mmc-pwrseq = <&usdhc1_pwrseq>;
+	keep-power-in-suspend;
+	non-removable;
 	vmmc-supply = <&reg_brcm>;
 	status = "okay";
 };
