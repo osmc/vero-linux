@@ -87,6 +87,8 @@ enum mx3_cpu_pwr_mode {
 	MX3_SLEEP,
 };
 
+extern int vpu352;
+
 void mx3_cpu_lp_set(enum mx3_cpu_pwr_mode mode);
 void imx_print_silicon_rev(const char *cpu, int srev);
 
