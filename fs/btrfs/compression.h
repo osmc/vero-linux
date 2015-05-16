@@ -79,5 +79,7 @@ struct btrfs_compress_op {
 
 extern const struct btrfs_compress_op btrfs_zlib_compress;
 extern const struct btrfs_compress_op btrfs_lzo_compress;
+extern const struct btrfs_compress_op btrfs_lz4_compress;
+extern const struct btrfs_compress_op btrfs_lz4hc_compress;
 
 #endif
