@@ -217,33 +217,42 @@ struct fb_bitfield {
 #define FB_SYNC_ON_GREEN	32	/* sync on green */
 
 #define FB_VMODE_NONINTERLACED  0	/* non interlaced */
-#define FB_VMODE_INTERLACED	1	/* interlaced	*/
-#define FB_VMODE_DOUBLE		2	/* double scan */
-#define FB_VMODE_ODD_FLD_FIRST	4	/* interlaced: top line first */
+#define FB_VMODE_INTERLACED	BIT(1)	/* interlaced	*/
+#define FB_VMODE_DOUBLE		BIT(2)	/* double scan */
+#define FB_VMODE_ODD_FLD_FIRST	BIT(3)	/* interlaced: top line first */
+#define FB_VMODE_MASK_SIMPLE	(BIT(1) | \
+				 BIT(2))
 /*
  * mxc_edid is taking 16 and 32 for ASPECT_16_9/4_3
  */
-#define FB_VMODE_3D_SBS_HALF	128     /* HDMI_3D_STRUCTURE_SIDE_BY_SIDE_HALF */
-#define FB_VMODE_3D_SBS_FULL	256     /* HDMI_3D_STRUCTURE_SIDE_BY_SIDE_FULL */
-#define FB_VMODE_3D_TOP_BOTTOM	512     /* HDMI_3D_STRUCTURE_TOP_AND_BOTTOM */
-#define FB_VMODE_3D_FRAME_PACK	1024    /* HDMI_3D_STRUCTURE_FRAME_PACKING */
-#define FB_VMODE_3D_MASK	1920
-#define FB_VMODE_MASK		2047
-
-#define FB_VMODE_YWRAP		2048	/* ywrap instead of panning     */
-#define FB_VMODE_SMOOTH_XPAN	4096	/* smooth xpan possible (internally used) */
-#define FB_VMODE_CONUPDATE	4096	/* don't update x/yoffset	*/
-
-#define FB_VMODE_ASPECT_1	BIT(13)
-#define FB_VMODE_ASPECT_4_3	BIT(4)
-#define FB_VMODE_ASPECT_5_4	BIT(14)
-#define FB_VMODE_ASPECT_16_9	BIT(5)
-#define FB_VMODE_ASPECT_16_10	BIT(15)
-#define FB_VMODE_ASPECT_MASK	(BIT(4) | \
+#define FB_VMODE_3D_SBS_HALF	BIT(4)     /* HDMI_3D_STRUCTURE_SIDE_BY_SIDE_HALF */
+#define FB_VMODE_3D_SBS_FULL	BIT(5)     /* HDMI_3D_STRUCTURE_SIDE_BY_SIDE_FULL */
+#define FB_VMODE_3D_TOP_BOTTOM	BIT(6)     /* HDMI_3D_STRUCTURE_TOP_AND_BOTTOM */
+#define FB_VMODE_3D_FRAME_PACK	BIT(7)    /* HDMI_3D_STRUCTURE_FRAME_PACKING */
+#define FB_VMODE_3D_MASK	(BIT(4) | \
 				 BIT(5) | \
+				 BIT(6) | \
+				 BIT(7))
+
+#define FB_VMODE_YWRAP		BIT(8)	/* ywrap instead of panning     */
+#define FB_VMODE_SMOOTH_XPAN	BIT(9)	/* smooth xpan possible (internally used) */
+#define FB_VMODE_CONUPDATE	BIT(9)	/* don't update x/yoffset	*/
+
+#define FB_VMODE_ASPECT_1	BIT(10)
+#define FB_VMODE_ASPECT_4_3	BIT(11)
+#define FB_VMODE_ASPECT_5_4	BIT(12)
+#define FB_VMODE_ASPECT_16_9	BIT(13)
+#define FB_VMODE_ASPECT_16_10	BIT(14)
+#define FB_VMODE_ASPECT_MASK	(BIT(10) | \
+				 BIT(11) | \
+				 BIT(12) | \
 				 BIT(13) | \
-				 BIT(14) | \
-				 BIT(15))
+				 BIT(14))
+
+#define FB_VMODE_MASK		(FB_VMODE_MASK_SIMPLE | \
+				 FB_VMODE_3D_MASK     | \
+				 FB_VMODE_ASPECT_MASK)
+
 /*
  * Display rotation support
  */

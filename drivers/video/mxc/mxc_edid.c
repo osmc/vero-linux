@@ -224,6 +224,7 @@ int mxc_edid_fb_mode_is_equal(bool use_aspect,
 		(mode1->vmode & mask & mode_mask) ==
 		(mode2->vmode & mask & mode_mask));
 }
+EXPORT_SYMBOL(mxc_edid_fb_mode_is_equal);
 
 static void get_detailed_timing(unsigned char *block,
 				struct fb_videomode *mode)
@@ -797,22 +798,26 @@ const struct fb_videomode *mxc_fb_find_nearest_mode(const struct fb_videomode *m
 		   ((mode->vmode & FB_VMODE_3D_MASK) != (cmode->vmode & FB_VMODE_3D_MASK)))
 			continue;
 
-		if ((cmode->vmode & FB_VMODE_INTERLACED) == (mode->vmode & FB_VMODE_INTERLACED)) {
-			d = abs(cmode->xres - mode->xres) +
-				abs(cmode->yres - mode->yres);
-			if (diff > d) {
-				diff = d;
-				diff_refresh = abs(cmode->refresh - mode->refresh);
+		if ((mode->vmode & FB_VMODE_MASK_SIMPLE) != (cmode->vmode & FB_VMODE_MASK_SIMPLE))
+			continue;
+
+		if ((mode->vmode & FB_VMODE_ASPECT_MASK) &&
+		   ((mode->vmode & FB_VMODE_ASPECT_MASK) != (cmode->vmode & FB_VMODE_ASPECT_MASK)))
+			continue;
+
+		d = abs(cmode->xres - mode->xres) +
+			abs(cmode->yres - mode->yres);
+		if (diff > d) {
+			diff = d;
+			diff_refresh = abs(cmode->refresh - mode->refresh);
+			best = cmode;
+		} else if (diff == d) {
+			d = abs(cmode->refresh - mode->refresh);
+			if (diff_refresh > d) {
+				diff_refresh = d;
 				best = cmode;
-			} else if (diff == d) {
-				d = abs(cmode->refresh - mode->refresh);
-				if (diff_refresh > d) {
-					diff_refresh = d;
-					best = cmode;
-				}
 			}
 		}
-
 	}
 
 	return best;
