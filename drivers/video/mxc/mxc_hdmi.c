@@ -208,7 +208,7 @@ static bool hdmi_inited;
 static bool hdcp_init;
 
 extern const struct fb_videomode mxc_cea_mode[64];
-extern void mxc_hdmi_cec_handle(u16 cec_stat);
+extern void mxc_hdmi_cec_handle(u32 cec_stat);
 
 static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event);
 static void hdmi_enable_overflow_interrupts(void);
@@ -216,6 +216,7 @@ static void hdmi_disable_overflow_interrupts(void);
 static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi);
 static void mxc_hdmi_default_edid_cfg(struct mxc_hdmi *hdmi);
 static void mxc_hdmi_default_modelist(struct mxc_hdmi *hdmi);
+static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi);
 
 static char *rgb_quant_range = "default";
 module_param(rgb_quant_range, charp, S_IRUGO);
@@ -252,8 +253,8 @@ static inline int cpu_is_imx6dl(struct mxc_hdmi *hdmi)
 
 static void dump_fb_videomode(struct fb_videomode *m)
 {
-	dev_dbg(&g_hdmi->pdev->dev, "fb_videomode = %d %d %d %d %d %d %d %d %d %d %d %d %d\n",
-		m->refresh, m->xres, m->yres, m->pixclock, m->left_margin,
+	pr_debug("fb_videomode = %ux%u@%uHz (%ukHz) %u %u %u %u %u %u %u %u %u\n",
+		m->xres, m->yres, m->refresh, m->pixclock, m->left_margin,
 		m->right_margin, m->upper_margin, m->lower_margin,
 		m->hsync_len, m->vsync_len, m->sync, m->vmode, m->flag);
 }
@@ -420,16 +421,10 @@ static ssize_t mxc_hdmi_store_enable_3d(struct device *dev,
 		hdmi->hdmi_data.enable_3d = 1;
 	}
 
-	switch (hdmi->edid_status) {
-	case HDMI_EDID_SUCCESS:
-		mxc_hdmi_edid_rebuild_modelist(hdmi);
-		break;
-	case HDMI_EDID_FAIL:
-		mxc_hdmi_default_edid_cfg(hdmi);
-	case HDMI_EDID_NO_MODES:
-	default:
-		mxc_hdmi_default_modelist(hdmi);
-	}
+	mxc_hdmi_edid_rebuild_modelist(hdmi);
+	if (hdmi->cable_plugin)
+		mxc_hdmi_set_mode(hdmi);
+
 	return ret;
 }
 
@@ -2004,7 +1999,7 @@ static void mxc_hdmi_notify_fb(struct mxc_hdmi *hdmi)
 	dev_dbg(&hdmi->pdev->dev, "%s exit\n", __func__);
 }
 
-static void mxc_fb_add_videomode(const struct fb_videomode *src_mode, struct list_head *modelist, u32 new_flag, u32 mod_vmode)
+static void mxc_fb_add_videomode(const struct fb_videomode *src_mode, struct list_head *modelist, const u32 new_flag, const u32 mod_vmode)
 {
 	struct fb_videomode mode;
 
@@ -2050,7 +2045,6 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 {
 	int i, j, k, nvic = 0, vic;
 	struct fb_videomode *mode;
-	const struct fb_videomode *edid_mode;
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
@@ -2066,23 +2060,23 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 		 * And add CEA modes in the modelist.
 		 */
 		mode = &hdmi->fbi->monspecs.modedb[i];
-		if (hdmi->edid_cfg.hdmi_cap &&
-		   (mode->flag & FB_MODE_IS_STANDARD) == 0)
-			continue;
 
 		if ((vic = mxc_edid_mode_to_vic(mode, 0)))
 			nvic++;
 
-		if (hdmi->edid_cfg.hdmi_cap && 
-			(vic == 0))
+		// allow detailed timing specification with vic=0 for HDMI
+		// mode
+		if (hdmi->edid_cfg.hdmi_cap &&
+		   ((mode->flag != FB_MODE_IS_DETAILED) && (vic == 0)
+				||
+		   (mode->flag == FB_MODE_IS_VESA)))
 				continue;
 
 		if (!(mode->vmode & FB_VMODE_ASPECT_MASK)) {
-			edid_mode = mxc_fb_find_nearest_mode(mode, &hdmi->fbi->modelist);
-			if (edid_mode->vmode & FB_VMODE_ASPECT_16_9)
-				mode->vmode |= FB_VMODE_ASPECT_16_9;
-			else
+			if (mode->yres == (mode->xres * 3)/4)
 				mode->vmode |= FB_VMODE_ASPECT_4_3;
+			else
+				mode->vmode |= FB_VMODE_ASPECT_16_9;
 		}
 
 		dev_info(&hdmi->pdev->dev, "Added mode: %d, vic: %d", i, vic);
@@ -2100,7 +2094,7 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 			hdmi->fbi->monspecs.modedb[i].flag);
 
 		fb_add_videomode(mode, &hdmi->fbi->modelist);
-		if (!hdmi->hdmi_data.enable_3d)
+		if (!hdmi->hdmi_data.enable_3d || !vic)
 			continue;
 
 		/* according to HDMI 1.4 specs, add mandatory modes for 50 and 60Hz existing 2d modes */
@@ -2169,15 +2163,15 @@ static void  mxc_hdmi_default_modelist(struct mxc_hdmi *hdmi)
 
 	fb_destroy_modelist(&hdmi->fbi->modelist);
 
+	fb_var_to_videomode(&m, &hdmi->fbi->var);
+	fb_add_videomode(&m, &hdmi->fbi->modelist);
+
 	/*Add all no interlaced CEA mode to default modelist */
 	for (i = 0; i < ARRAY_SIZE(mxc_cea_mode); i++) {
 		mode = &mxc_cea_mode[i];
 		if (mode->xres != 0)
 			fb_add_videomode(mode, &hdmi->fbi->modelist);
 	}
-
-	fb_var_to_videomode(&m, &hdmi->fbi->var);
-	fb_add_videomode(&m, &hdmi->fbi->modelist);
 
 	fb_new_modelist(hdmi->fbi);
 
@@ -2935,7 +2929,7 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 	/* Save default video mode */
 	memcpy(&hdmi->default_mode, &m, sizeof(struct fb_videomode));
 
-	mode = fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
+	mode = mxc_fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
 	if (!mode) {
 		pr_err("%s: could not find mode in modelist\n", __func__);
 		return -1;
