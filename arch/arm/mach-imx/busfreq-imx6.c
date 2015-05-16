@@ -53,6 +53,8 @@
 #define DDR3_AUDIO_CLK		50000000
 #define LPDDR2_AUDIO_CLK	100000000
 
+int vpu352 = 0;
+
 int high_bus_freq_mode;
 int med_bus_freq_mode;
 int audio_bus_freq_mode;
@@ -472,6 +474,8 @@ int set_high_bus_freq(int high_bus_freq)
 
 void request_bus_freq(enum bus_freq_mode mode)
 {
+	if (vpu352)
+		return;
 #ifdef CONFIG_ARM_IMX6Q_CPUFREQ
 	mutex_lock(&bus_freq_mutex);
 
@@ -525,6 +529,8 @@ EXPORT_SYMBOL(request_bus_freq);
 
 void release_bus_freq(enum bus_freq_mode mode)
 {
+	if (vpu352)
+		return;
 #ifdef CONFIG_ARM_IMX6Q_CPUFREQ
 	mutex_lock(&bus_freq_mutex);
 
@@ -622,6 +628,20 @@ static ssize_t bus_freq_scaling_enable_show(struct device *dev,
 		return sprintf(buf, "Bus frequency scaling is disabled\n");
 }
 
+static ssize_t vpu352_enable_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	if (vpu352)
+		return sprintf(buf, "VPU352M is enabled\n");
+	else
+		return sprintf(buf, "VPU352M is disabled\n");
+}
+
+static int vpu352_setup(char *options)
+{
+	return kstrtol(options, 0, (long int *)&vpu352);
+}
+
 static ssize_t bus_freq_scaling_enable_store(struct device *dev,
 				 struct device_attribute *attr,
 				 const char *buf, size_t size)
@@ -686,6 +706,8 @@ static struct notifier_block imx_busfreq_reboot_notifier = {
 
 static DEVICE_ATTR(enable, 0644, bus_freq_scaling_enable_show,
 			bus_freq_scaling_enable_store);
+static DEVICE_ATTR(vpu352, 0444, vpu352_enable_show,
+			NULL);
 #endif
 
 /*!
@@ -866,6 +888,12 @@ static int busfreq_probe(struct platform_device *pdev)
 		       "Unable to register sysdev entry for BUSFREQ");
 		return err;
 	}
+	err = sysfs_create_file(&busfreq_dev->kobj, &dev_attr_vpu352.attr);
+	if (err) {
+		dev_err(busfreq_dev,
+		       "Unable to register sysdev entry for BUSFREQ");
+		return err;
+	}
 
 	if (of_property_read_u32(pdev->dev.of_node, "fsl,max_ddr_freq",
 			&ddr_normal_rate)) {
@@ -933,6 +961,11 @@ static struct platform_driver busfreq_driver = {
 
 static int __init busfreq_init(void)
 {
+	if (vpu352) {
+		printk(KERN_INFO "VPU@352Mhz activated. Bus freq driver module inactive\n");
+		return 0;
+	}
+
 	if (platform_driver_register(&busfreq_driver) != 0)
 		return -ENODEV;
 
@@ -952,6 +985,7 @@ static void __exit busfreq_cleanup(void)
 	platform_driver_unregister(&busfreq_driver);
 }
 
+__setup("vpu352=", vpu352_setup);
 module_init(busfreq_init);
 module_exit(busfreq_cleanup);
 

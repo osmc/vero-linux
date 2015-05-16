@@ -20,6 +20,8 @@
 #define PU_SOC_VOLTAGE_HIGH	1275000
 #define FREQ_1P2_GHZ		1200000000
 
+extern int vpu352;
+
 static struct regulator *arm_reg;
 static struct regulator *pu_reg;
 static struct regulator *soc_reg;
@@ -251,6 +253,10 @@ static int imx6q_cpufreq_probe(struct platform_device *pdev)
 			unsigned long volt = be32_to_cpup(val++);
 			if (freq_table[j].frequency == freq) {
 				imx6_soc_volt[soc_opp_count++] = volt;
+				if (vpu352 && freq == 792000) {
+					pr_info("VPU352: increase SOC/PU voltage for VPU352MHz\n");
+					imx6_soc_volt[soc_opp_count-1] = 1250000;
+				}
 				break;
 			}
 		}
