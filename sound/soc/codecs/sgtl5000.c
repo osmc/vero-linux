@@ -121,6 +121,8 @@ struct sgtl5000_priv {
 	struct regmap *regmap;
 	struct clk *mclk;
 	int revision;
+	u8 micbias_resistor;
+	u8 micbias_voltage;
 };
 
 /*
