@@ -392,7 +392,7 @@
 				iramsize = <0x21000>;
 				iram = <&ocram>;
 				resets = <&src 1>;
-				pu-supply = <&reg_pu>;
+				power-domains = <&gpc 1>;
 			};
 
 			aipstz@0207c000 { /* AIPSTZ1 */
@@ -1096,10 +1096,15 @@
 			};
 
 			mipi_dsi: mipi@021e0000 {
+				compatible = "fsl,imx6q-mipi-dsi";
 				#address-cells = <1>;
 				#size-cells = <0>;
 				reg = <0x021e0000 0x4000>;
 				status = "disabled";
+				interrupts = <0 102 0x04>;
+				gpr = <&gpr>;
+				clocks = <&clks IMX6QDL_CLK_HSI_TX>, <&clks IMX6QDL_CLK_VIDEO_27M>;
+				clock-names = "mipi_pllref_clk", "mipi_cfg_clk";
 			};
 
 			vdoa@021e4000 {
