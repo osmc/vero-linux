@@ -2824,10 +2824,11 @@ fec_enet_open(struct net_device *ndev)
 	if (ret)
 		goto err_enet_alloc;
 
-	/* Probe and connect to PHY when open the interface */
-	ret = fec_enet_mii_probe(ndev);
-	if (ret)
-		goto err_enet_mii_probe;
+	if (!fep->phy_dev) {
+		ret = fec_enet_mii_probe(ndev);
+		if (ret)
+			goto err_enet_alloc;
+	}
 
 	fec_restart(ndev);
 	napi_enable(&fep->napi);
@@ -2850,8 +2851,6 @@ fec_enet_open(struct net_device *ndev)
 
 	return 0;
 
-err_enet_mii_probe:
-	fec_enet_free_buffers(ndev);
 err_enet_alloc:
 	fec_enet_clk_enable(ndev, false);
 	pinctrl_pm_select_sleep_state(&fep->pdev->dev);
@@ -3440,12 +3439,16 @@ fec_probe(struct platform_device *pdev)
 
 	/* Carrier starts down, phylib will bring it up */
 	netif_carrier_off(ndev);
-	fec_enet_clk_enable(ndev, false);
-	pinctrl_pm_select_sleep_state(&pdev->dev);
 
 	ret = register_netdev(ndev);
 	if (ret)
 		goto failed_register;
+
+	ret = fec_enet_mii_probe(ndev);
+	if (ret)
+		goto failed_register;
+
+	phy_start_aneg(fep->phy_dev);
 
 	device_init_wakeup(&ndev->dev, fep->wol_flag &
 			   FEC_WOL_HAS_MAGIC_PACKET);
