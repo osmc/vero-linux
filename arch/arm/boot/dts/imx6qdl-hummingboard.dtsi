@@ -413,3 +413,18 @@
 	status = "okay";
 	no-msi;
 };
+
+&ecspi1 {
+	status = "okay";
+	fsl,spi-num-chipselects = <1>;
+};
+
+&ecspi2 {
+	status = "okay";
+	fsl,spi-num-chipselects = <2>;
+};
+
+&ecspi3 {
+	status = "okay";
+	fsl,spi-num-chipselects = <3>;
+};
