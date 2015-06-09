@@ -106,13 +106,14 @@ static irqreturn_t mxc_hdmi_cec_isr(int irq, void *data)
 	unsigned long flags;
 	irqreturn_t ret = IRQ_HANDLED;
 
-	spin_lock_irqsave(&hdmi_cec_root.i_lock, flags);
-
 	cec_stat = hdmi_readb(HDMI_IH_CEC_STAT0);
 	if (!cec_stat) {
 		ret = IRQ_NONE;
 		goto irqnone;
 	}
+
+	spin_lock_irqsave(&hdmi_cec_root.i_lock, flags);
+
 	hdmi_writeb(0x7f, HDMI_IH_MUTE_CEC_STAT0);
 	hdmi_writeb(cec_stat, HDMI_IH_CEC_STAT0);
 
@@ -130,8 +131,8 @@ static irqreturn_t mxc_hdmi_cec_isr(int irq, void *data)
 	pr_debug("%s:  HDMI CEC interrupt received\n", __func__);
 	schedule_delayed_work(&(hdmi_cec_root.hdmi_cec_work), msecs_to_jiffies(5));
 
-irqnone:
 	spin_unlock_irqrestore(&hdmi_cec_root.i_lock, flags);
+irqnone:
 	return ret;
 }
 
@@ -211,9 +212,6 @@ void mxc_hdmi_cec_msg(u8 event_type)
 		event->data.msg[i] = (event_type == MESSAGE_TYPE_RECEIVE_SUCCESS) ?
 				hdmi_readb(HDMI_CEC_RX_DATA0+i) : hdmi_readb(HDMI_CEC_TX_DATA0+i);
 
-	if (event_type == MESSAGE_TYPE_RECEIVE_SUCCESS)
-		hdmi_writeb(0x0, HDMI_CEC_LOCK);
-
 	event->data.event_type = (event_type == MESSAGE_TYPE_NOACK && la_is_local(event->data.msg[0] & 0x0f)) ?
 								MESSAGE_TYPE_SEND_SUCCESS : event_type;
 
@@ -275,6 +273,7 @@ static void mxc_hdmi_cec_worker(struct work_struct *work)
 		/*EOM is detected so that the received data is ready in the receiver data buffer*/
 		if (hdmi_cec_root.latest_cec_stat & HDMI_IH_CEC_STAT0_EOM) {
 			mxc_hdmi_cec_msg(MESSAGE_TYPE_RECEIVE_SUCCESS);
+			hdmi_writeb(0x0, HDMI_CEC_LOCK);
 		}
 		hdmi_cec_root.latest_cec_stat = 0;
 	}
