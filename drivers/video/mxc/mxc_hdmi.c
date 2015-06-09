@@ -1416,63 +1416,70 @@ static void mxc_hdmi_phy_init(struct mxc_hdmi *hdmi)
 	hdmi->phy_enabled = true;
 }
 
-static void mxc_hdmi_vendor_infoframe(struct mxc_hdmi *hdmi)
+static enum hdmi_3d_structure mxc_3d_structure_infoframe(u32 layout)
 {
-	struct hdmi_vendor_infoframe frame;
-	u8 buffer[24/*PAYLOAD available in IMX6 regs*/+HDMI_INFOFRAME_HEADER_SIZE], val;
-	ssize_t size;
-	int ptr;
-
-	return 0;
-
-	hdmi_vendor_infoframe_init(&frame);
-	frame.s3d_ext_data = 0;
-	if (hdmi->fbi->var.vmode & FB_VMODE_3D_TOP_BOTTOM)
-		frame.s3d_struct = HDMI_3D_STRUCTURE_TOP_AND_BOTTOM;
-	else if (hdmi->fbi->var.vmode & FB_VMODE_3D_SBS_HALF) {
-		frame.s3d_struct = HDMI_3D_STRUCTURE_SIDE_BY_SIDE_HALF;
-		frame.s3d_ext_data = 4;
-	} else
-//		frame.vic = hdmi->vic;
-		goto stop;
-
-	dev_dbg(&hdmi->pdev->dev, "%s - setting 3d struct to %d\n", __func__, frame.s3d_struct);
-
-	if ((size = hdmi_vendor_infoframe_pack(&frame, &buffer, sizeof(buffer))) < 0) {
-		dev_err(&hdmi->pdev->dev, "%s - error packing vendor infoframe !\n", __func__);
-		return;
+	switch (layout) {
+	case FB_VMODE_3D_SBS_HALF:
+		return HDMI_3D_STRUCTURE_SIDE_BY_SIDE_HALF;
+	case FB_VMODE_3D_SBS_FULL:
+		return HDMI_3D_STRUCTURE_SIDE_BY_SIDE_FULL;
+	case FB_VMODE_3D_TOP_BOTTOM:
+		return HDMI_3D_STRUCTURE_TOP_AND_BOTTOM;
+	case FB_VMODE_3D_FRAME_PACK:
+		return HDMI_3D_STRUCTURE_FRAME_PACKING;
+	default:
+		return HDMI_3D_STRUCTURE_INVALID;
 	}
+}
 
-	dev_dbg(&hdmi->pdev->dev, "%s - 3d struct size %d - %d\n", __func__, size, buffer[2]);
+static int mxc_hdmi_vendor_infoframe(struct mxc_hdmi *hdmi, struct hdmi_vendor_infoframe *frame)
+{
+	int err;
+	u32 s3d_flags;
+	u8 vic;
+	uint8_t buffer[32]; //HDMI_FC_VSDPAYLOAD23 - HDMI_FC_VSDIEEEID0
+			    //(with a hole starting at 0102B, ending 102F
+	ssize_t len;
+	int i;
 
-	hdmi_writeb(0x03, HDMI_FC_VSDIEEEID0);
-	hdmi_writeb(0x0c, HDMI_FC_VSDIEEEID1);
-	hdmi_writeb(0x00, HDMI_FC_VSDIEEEID2);
+	if (!frame)
+		return -EINVAL;
 
-	ptr = 0;//7; //checksum - first byte of VSD payload
-	do {
-		dev_dbg(&hdmi->pdev->dev, "%s - writing %x at buffer[%d]\n", __func__, buffer[ptr], ptr);
-		hdmi_writeb(buffer[ptr], HDMI_FC_VSDPAYLOAD0+ ptr/*-7*/);
-		ptr++;
-	} while(ptr < size);
-	hdmi_writeb(size/*3*/, HDMI_FC_VSDSIZE);
+	vic = hdmi->vic;
+	s3d_flags = (*hdmi->fbi->mode).vmode & FB_VMODE_3D_MASK;
 
-stop:
-	val = hdmi_readb(HDMI_FC_DATAUTO0);
-	if (frame.s3d_struct < 0)
-		val &= ~0x8;
+	if (!vic && !s3d_flags)
+		return -EINVAL;
+
+	err = hdmi_vendor_infoframe_init(frame);
+	if (err < 0)
+		return err;
+
+	if (s3d_flags)
+		frame->s3d_struct = mxc_3d_structure_infoframe(s3d_flags);
+	else if (vic)
+		frame->vic = vic;
 	else
-		val |= 0x8;
-	hdmi_writeb(val, HDMI_FC_DATAUTO0);
+		return -EINVAL;
 
-	if (frame.s3d_struct < 0)
-		hdmi_writeb(0x0, HDMI_FC_DATAUTO2);
-	else {
-		hdmi_writeb(0x10, HDMI_FC_DATAUTO2);
-                hdmi_writeb(0x1, HDMI_FC_DATAUTO1);
-        }
+	/* see comment above for the reason for this offset */
+	len = hdmi_vendor_infoframe_pack(frame, buffer+1, sizeof(buffer)-1);
+	if (len < 0)
+		return -EINVAL;
 
-	dev_dbg(&hdmi->pdev->dev, "%s - 3d wrote HDMI_FC_DATAUTO0 %x\n", __func__, val);
+	buffer[0] = buffer[5];
+	buffer[1] = buffer[3];
+	buffer[2] = 0;
+	buffer[3] = 0;
+	buffer[4] = 0;
+	buffer[5] = 0;
+
+	//buffer[6] = buffer[6];
+	//buffer[7] = buffer[7];
+
+	for (i = 0; i < 32; i++)
+		hdmi_writeb(buffer[i], HDMI_FC_VSDIEEEID0 + i);
+	return 0;
 }
 
 static void hdmi_config_AVI(struct mxc_hdmi *hdmi)
@@ -1484,6 +1491,7 @@ static void hdmi_config_AVI(struct mxc_hdmi *hdmi)
 	struct fb_videomode mode;
 	const struct fb_videomode *edid_mode;
 	bool aspect_16_9;
+	struct hdmi_vendor_infoframe vendor_infoframe;
 
 	dev_dbg(&hdmi->pdev->dev, "set up AVI frame\n");
 	fb_var_to_videomode(&mode, &hdmi->fbi->var);
@@ -1602,7 +1610,7 @@ static void hdmi_config_AVI(struct mxc_hdmi *hdmi)
 	hdmi_writeb(0, HDMI_FC_AVISRB0);
 	hdmi_writeb(0, HDMI_FC_AVISRB1);
 
-//	mxc_hdmi_vendor_infoframe(hdmi);
+	mxc_hdmi_vendor_infoframe(hdmi, &vendor_infoframe);
 }
 
 /*!
@@ -1992,6 +2000,7 @@ static void mxc_hdmi_notify_fb(struct mxc_hdmi *hdmi)
 	dev_dbg(&hdmi->pdev->dev, "%s exit\n", __func__);
 }
 
+inline
 static void mxc_fb_add_videomode(const struct fb_videomode *src_mode, struct list_head *modelist, const u32 new_flag, const u32 mod_vmode)
 {
 	struct fb_videomode mode;
@@ -2001,9 +2010,42 @@ static void mxc_fb_add_videomode(const struct fb_videomode *src_mode, struct lis
 	fb_add_videomode(&mode, modelist);
 }
 
+enum {
+	hzSTART = 0,
+	hz50    = 50,
+	hz60    = 60,
+	hzEND   = 61
+};
+
+struct stereo_mandatory_mode {
+	int				rfc_refresh;
+	const struct fb_videomode	*rfc_parent_cea_mode;
+	uint32_t			flag;
+	uint32_t			vmode;
+};
+
+static struct stereo_mandatory_mode stereo_mandatory_modes[] = {
+	// 1280x720p @ 59.94 / 60Hz TOP-and-BOTTOM
+	{ 60, &mxc_cea_mode[4],  FB_MODE_IS_3D, FB_VMODE_3D_TOP_BOTTOM },
+	// 1920x1080p @ 23.98 / 24Hz TOP-and-BOTTOM
+	{ 60, &mxc_cea_mode[32], FB_MODE_IS_3D, FB_VMODE_3D_TOP_BOTTOM },
+	// 1280x720p @ 59.94 / 60Hz FRAME-PACK
+	{ 60, &mxc_cea_mode[4],  FB_MODE_IS_3D, FB_VMODE_3D_FRAME_PACK },
+	// 1920x1080p @ 23.98 / 24Hz FRAME-PACK
+	{ 60, &mxc_cea_mode[32], FB_MODE_IS_3D, FB_VMODE_3D_FRAME_PACK },
+	// 1920x1080i @ 59.94 / 60Hz SIDE-by-SIDE half
+	{ 60, &mxc_cea_mode[5],  FB_MODE_IS_3D, FB_VMODE_3D_SBS_HALF   },
+	// 1280x720p @ 50Hz TOP-and-BOTTOM
+	{ 50, &mxc_cea_mode[19], FB_MODE_IS_3D, FB_VMODE_3D_TOP_BOTTOM },
+	// 1280x720p @ 50Hz FRAME-PACK
+	{ 50, &mxc_cea_mode[19], FB_MODE_IS_3D, FB_VMODE_3D_FRAME_PACK },
+	// 1920x1080i @ 50Hz SIDE-by-SIDE half
+	{ 50, &mxc_cea_mode[20], FB_MODE_IS_3D, FB_VMODE_3D_SBS_HALF   }
+};
+
 static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 {
-	int i, j, nvic = 0, vic;
+	int i, j, k, nvic = 0, vic;
 	struct fb_videomode *mode;
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
@@ -2057,26 +2099,16 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 		if (!hdmi->hdmi_data.enable_3d || !vic)
 			continue;
 
-		/* according to HDMI 1.4 specs */
-		if (mode->refresh == 60 && hdmi->edid_cfg.hdmi_3d_present) {
-			// 1280x720p @ 59.94 / 60Hz TOP-and-BOTTOM
-			mxc_fb_add_videomode(&mxc_cea_mode[4], &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_TOP_BOTTOM);
-			// 1920x1080p @ 23.98 / 24Hz TOP-and-BOTTOM
-			mxc_fb_add_videomode(&mxc_cea_mode[32], &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_TOP_BOTTOM);
-			// 1280x720p @ 59.94 / 60Hz FRAME-PACK
-			mxc_fb_add_videomode(&mxc_cea_mode[4], &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_FRAME_PACK);
-			// 1920x1080p @ 23.98 / 24Hz FRAME-PACK
-			mxc_fb_add_videomode(&mxc_cea_mode[32], &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_FRAME_PACK);
-			// 1920x1080i @ 59.94 / 60Hz SIDE-by-SIDE half
-			mxc_fb_add_videomode(&mxc_cea_mode[5], &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_SBS_HALF);
-
-		} else if (mode->refresh == 50 && hdmi->edid_cfg.hdmi_3d_present) {
-			// 1280x720p @ 50Hz TOP-and-BOTTOM
-			mxc_fb_add_videomode(&mxc_cea_mode[19], &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_TOP_BOTTOM);
-			// 1280x720p @ 50Hz FRAME-PACK
-			mxc_fb_add_videomode(&mxc_cea_mode[19], &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_FRAME_PACK);
-			// 1920x1080i @ 50Hz SIDE-by-SIDE half
-			mxc_fb_add_videomode(&mxc_cea_mode[20], &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_SBS_HALF);
+		/* according to HDMI 1.4 specs, add mandatory modes for 50 and 60Hz existing 2d modes */
+		for (k = hzSTART + 1; k < hzEND; k++) {
+		    if (mode->refresh == k && hdmi->edid_cfg.hdmi_3d_present) {
+			for (j = 0; j < sizeof(stereo_mandatory_modes) / sizeof(struct stereo_mandatory_mode); j++) {
+				if (stereo_mandatory_modes[j].rfc_refresh != k)
+					continue;
+				mxc_fb_add_videomode(stereo_mandatory_modes[j].rfc_parent_cea_mode, &hdmi->fbi->modelist,
+							stereo_mandatory_modes[j].flag, stereo_mandatory_modes[j].vmode);
+			}
+		    }
 		}
 
 		if ((hdmi->edid_cfg.hdmi_3d_multi_present == 2 && hdmi->edid_cfg.hdmi_3d_mask_all & (1 << (nvic-1))) ||
@@ -2471,7 +2503,6 @@ static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event)
 
 	hdmi_disable_overflow_interrupts();
 
-	mxc_hdmi_vendor_infoframe(hdmi);
 	dev_dbg(&hdmi->pdev->dev, "CEA mode used vic=%d\n", hdmi->vic);
 	if (hdmi->edid_cfg.hdmi_cap || !hdmi->edid_status) {
 		hdmi_set_dvi_mode(0);
@@ -2628,7 +2659,6 @@ static int mxc_hdmi_fb_event(struct notifier_block *nb,
 
 			hdmi->blank = *((int *)event->data);
 
-			//spin_lock_irqsave(&hdmi->irq_lock, flags);
 			/* Re-enable HPD interrupts */
 			val = hdmi_readb(HDMI_PHY_MASK0);
 			val &= ~hdmi->plug_mask;
@@ -2636,7 +2666,6 @@ static int mxc_hdmi_fb_event(struct notifier_block *nb,
 
 			/* Unmute interrupts */
 			hdmi_writeb(~hdmi->plug_event, HDMI_IH_MUTE_PHY_STAT0);
-			//spin_unlock_irqrestore(&hdmi->irq_lock, flags);
 
 			if (hdmi->fb_reg && hdmi->cable_plugin)
 				mxc_hdmi_setup(hdmi, val);
