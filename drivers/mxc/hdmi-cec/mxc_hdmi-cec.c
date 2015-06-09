@@ -217,7 +217,6 @@ void mxc_hdmi_cec_msg(u8 event_type)
 
 	list_for_each_entry(client, &hdmi_cec_root.client_head, client_node) {
 		if (client->la == 0xff) continue;
-		pr_debug("%s:  -- l:%x, r:%x, ch:%x LA: %x\n", __func__, (event->data.msg[0] & 0xf0) >> 4, event->data.msg[0] & 0x0f, client->libcec_la, client->la);
 
 		if ((event_type == MESSAGE_TYPE_RECEIVE_SUCCESS && 
 					(((event->data.msg[0] & 0x0f) == 15 && client->libcec_la != client->la) || (event->data.msg[0] & 0x0f) == client->la))
@@ -225,7 +224,6 @@ void mxc_hdmi_cec_msg(u8 event_type)
 		    (event_type != MESSAGE_TYPE_RECEIVE_SUCCESS &&
 					(client->libcec_la == (int)client->la)) )
 		{
-			pr_debug("%s:  -- adding msg %x->%x to client %x (event: %x)\n", __func__, (event->data.msg[0] & 0xf0) >> 4, event->data.msg[0] & 0x0f, client->la, (int)event);
 			__mxc_hdmi_cec_msg(event, client, &wakeup, 0);
 		}
 
@@ -234,7 +232,6 @@ void mxc_hdmi_cec_msg(u8 event_type)
 					||
 					((event->data.msg[0] & 0x0f) == 15 && !client->libcec_la)) )
 		{
-			pr_debug("%s:  -- COPYing event to client %x\n", __func__, (int)client);
 			__mxc_hdmi_cec_msg(event, client, &wakeup, MESSAGE_TYPE_RECEIVE_SUCCESS);
 		}
 		client->libcec_la = 0;
