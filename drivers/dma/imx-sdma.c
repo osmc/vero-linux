@@ -1743,7 +1743,7 @@ static int __init sdma_probe(struct platform_device *pdev)
 	sdma->dma_device.device_free_chan_resources = sdma_free_chan_resources;
 	sdma->dma_device.device_tx_status = sdma_tx_status;
 	sdma->dma_device.device_prep_slave_sg = sdma_prep_slave_sg;
-	sdma->dma_device.device_prep_dma_cyclic = sdma_prep_dma_cyclic;
+	sdma->dma_device.device_prep_dma_cyclic = (void*)sdma_prep_dma_cyclic;
 	sdma->dma_device.device_config = sdma_config;
 	sdma->dma_device.device_terminate_all = sdma_disable_channel;
 	sdma->dma_device.src_addr_widths = BIT(DMA_SLAVE_BUSWIDTH_4_BYTES);
