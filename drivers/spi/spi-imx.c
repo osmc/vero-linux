@@ -119,6 +119,10 @@ struct spi_imx_data {
 	int chipselect[0];
 };
 
+static struct spi_board_info info = {
+	.modalias	= "spidev",
+};
+
 static inline int is_imx27_cspi(struct spi_imx_data *d)
 {
 	return d->devtype_data->devtype == IMX27_CSPI;
@@ -1259,6 +1263,7 @@ static int spi_imx_probe(struct platform_device *pdev)
 		goto out_clk_put;
 	}
 
+	spi_new_device(master, &info);
 	dev_info(&pdev->dev, "probed\n");
 
 	clk_disable(spi_imx->clk_ipg);
