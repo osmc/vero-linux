@@ -45,6 +45,7 @@
 #define MESSAGE_TYPE_CONNECTED                  4
 #define MESSAGE_TYPE_SEND_SUCCESS               5
 
+#define SIGNAL_FREE_LOST			BIT(2)
 #define SIGNAL_FREE_TIME_NORMAL			BIT(1)
 #define SIGNAL_FREE_TIME_RESEND			0
 

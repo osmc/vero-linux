@@ -95,6 +95,8 @@ static u8 open_count = 0;
 
 static wait_queue_head_t hdmi_cec_qs, hdmi_cec_qw;
 
+static int SIGNAL_FREE_ARB = 0;
+
 static inline bool la_is_local(u8 la)
 {
 	return (la == 0xf) ? false : hdmi_cec_root.addresses & BIT(la);
@@ -119,12 +121,17 @@ static irqreturn_t mxc_hdmi_cec_isr(int irq, void *data)
 
 	if (cec_stat & HDMI_IH_CEC_STAT0_ERROR_INIT) {
 		hdmi_cec_root.send_error++;
+		SIGNAL_FREE_ARB = SIGNAL_FREE_TIME_RESEND;
 		pr_debug("%s:  error %d\n", __func__, hdmi_cec_root.send_error);
 		wake_up(&hdmi_cec_qs);
 	}
 	if (cec_stat & (HDMI_IH_CEC_STAT0_NACK | HDMI_IH_CEC_STAT0_DONE)) {
 		hdmi_cec_root.send_error = 0;
 		wake_up(&hdmi_cec_qs);
+	}
+	if (cec_stat & HDMI_IH_CEC_STAT0_ARB_LOST) {
+		SIGNAL_FREE_ARB = SIGNAL_FREE_LOST;
+		pr_debug("%s: ARB LOST \n", __func__);
 	}
 
 	hdmi_cec_root.latest_cec_stat = cec_stat;
@@ -270,12 +277,13 @@ static void mxc_hdmi_cec_worker(struct work_struct *work)
 		/*EOM is detected so that the received data is ready in the receiver data buffer*/
 		if (hdmi_cec_root.latest_cec_stat & HDMI_IH_CEC_STAT0_EOM) {
 			mxc_hdmi_cec_msg(MESSAGE_TYPE_RECEIVE_SUCCESS);
-			hdmi_writeb(0x0, HDMI_CEC_LOCK);
+			val = hdmi_readb(HDMI_CEC_LOCK);
+			hdmi_writeb(val & ~BIT(0), HDMI_CEC_LOCK);
 		}
 		hdmi_cec_root.latest_cec_stat = 0;
 	}
 
-	val = HDMI_IH_CEC_STAT0_WAKEUP | HDMI_IH_CEC_STAT0_ERROR_FOLL | HDMI_IH_CEC_STAT0_ARB_LOST;
+	val = HDMI_IH_CEC_STAT0_WAKEUP | HDMI_IH_CEC_STAT0_ERROR_FOLL;
 	spin_lock_irqsave(&hdmi_cec_root.i_lock, flags);
 	hdmi_writeb(val, HDMI_IH_MUTE_CEC_STAT0);
 	spin_unlock_irqrestore(&hdmi_cec_root.i_lock, flags);
@@ -404,8 +412,9 @@ static ssize_t hdmi_cec_write(struct file *file, const char __user *buf,
 
 	do {
 		val = hdmi_readb(HDMI_CEC_CTRL); val |= 0x01; val &= ~0x6;
-		val |= hdmi_cec_root.send_error ? SIGNAL_FREE_TIME_RESEND : SIGNAL_FREE_TIME_NORMAL;
+		val |= SIGNAL_FREE_ARB;
 		hdmi_writeb(val, HDMI_CEC_CTRL);
+		SIGNAL_FREE_ARB = SIGNAL_FREE_TIME_NORMAL;
 
 		ret = wait_event_timeout(hdmi_cec_qs, !((val = hdmi_readb(HDMI_CEC_CTRL)) & 0x01), msecs_to_jiffies(timeout));
 		pr_debug("%s:  wait_event ret %d\n", __func__, ret);
@@ -439,11 +448,11 @@ static void hdmi_cec_hwenable(void)
 	hdmi_writeb(val, HDMI_MC_CLKDIS);
 
 	val = HDMI_IH_CEC_STAT0_ERROR_INIT | HDMI_IH_CEC_STAT0_NACK |
-		HDMI_IH_CEC_STAT0_EOM | HDMI_IH_CEC_STAT0_DONE;
+		HDMI_IH_CEC_STAT0_EOM | HDMI_IH_CEC_STAT0_DONE |
+		HDMI_IH_CEC_STAT0_ARB_LOST;
 	hdmi_writeb(val, HDMI_CEC_POLARITY);
 
-	val = HDMI_IH_CEC_STAT0_WAKEUP | HDMI_IH_CEC_STAT0_ERROR_FOLL |
-		HDMI_IH_CEC_STAT0_ARB_LOST;
+	val = HDMI_IH_CEC_STAT0_WAKEUP | HDMI_IH_CEC_STAT0_ERROR_FOLL;
 	hdmi_writeb(val, HDMI_CEC_MASK);
 	hdmi_writeb(val, HDMI_IH_MUTE_CEC_STAT0);
 	hdmi_writeb(0x0, HDMI_CEC_LOCK);
