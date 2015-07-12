@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Freescale Semiconductor, Inc.
+ * Copyright (C) 2012-2014 Freescale Semiconductor, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -123,6 +123,9 @@
 #define IMX6Q_GPR1_USB_OTG_ID_SEL_ENET_RX_ER	0x0
 #define IMX6Q_GPR1_USB_OTG_ID_SEL_GPIO_1	BIT(13)
 #define IMX6Q_GPR1_GINT				BIT(12)
+#define IMX6Q_GPR1_GINT_MASK			BIT(12)
+#define IMX6Q_GPR1_GINT_CLEAR			0x0
+#define IMX6Q_GPR1_GINT_ASSERT			BIT(12)
 #define IMX6Q_GPR1_ADDRS3_MASK			(0x3 << 10)
 #define IMX6Q_GPR1_ADDRS3_32MB			(0x0 << 10)
 #define IMX6Q_GPR1_ADDRS3_64MB			(0x1 << 10)
@@ -285,15 +288,15 @@
 #define IMX6Q_GPR10_OCRAM_TZ_ADDR_MASK		(0x3f << 5)
 #define IMX6Q_GPR10_OCRAM_TZ_EN_MASK		BIT(4)
 #define IMX6Q_GPR10_DCIC2_MUX_CTL_MASK		(0x3 << 2)
-#define IMX6Q_GPR10_DCIC2_MUX_CTL_IPU1_DI0	(0x0 << 2)
-#define IMX6Q_GPR10_DCIC2_MUX_CTL_IPU1_DI1	(0x1 << 2)
-#define IMX6Q_GPR10_DCIC2_MUX_CTL_IPU2_DI0	(0x2 << 2)
-#define IMX6Q_GPR10_DCIC2_MUX_CTL_IPU2_DI1	(0x3 << 2)
+#define IMX6Q_GPR10_DCIC2_MUX_CTL_IPU1_DI1	(0x0 << 2)
+#define IMX6Q_GPR10_DCIC2_MUX_CTL_LVDS0		(0x1 << 2)
+#define IMX6Q_GPR10_DCIC2_MUX_CTL_LVDS1		(0x2 << 2)
+#define IMX6Q_GPR10_DCIC2_MUX_CTL_MIPI		(0x3 << 2)
 #define IMX6Q_GPR10_DCIC1_MUX_CTL_MASK		(0x3 << 0)
 #define IMX6Q_GPR10_DCIC1_MUX_CTL_IPU1_DI0	(0x0 << 0)
-#define IMX6Q_GPR10_DCIC1_MUX_CTL_IPU1_DI1	(0x1 << 0)
-#define IMX6Q_GPR10_DCIC1_MUX_CTL_IPU2_DI0	(0x2 << 0)
-#define IMX6Q_GPR10_DCIC1_MUX_CTL_IPU2_DI1	(0x3 << 0)
+#define IMX6Q_GPR10_DCIC1_MUX_CTL_LVDS0		(0x1 << 0)
+#define IMX6Q_GPR10_DCIC1_MUX_CTL_LVDS1		(0x2 << 0)
+#define IMX6Q_GPR10_DCIC1_MUX_CTL_HDMI		(0x3 << 0)
 
 #define IMX6Q_GPR12_ARMP_IPG_CLK_EN		BIT(27)
 #define IMX6Q_GPR12_ARMP_AHB_CLK_EN		BIT(26)
@@ -302,6 +305,7 @@
 #define IMX6Q_GPR12_DEVICE_TYPE			(0xf << 12)
 #define IMX6Q_GPR12_PCIE_CTL_2			BIT(10)
 #define IMX6Q_GPR12_LOS_LEVEL			(0x1f << 4)
+#define IMX6Q_GPR12_LOS_LEVEL_9			(0x9 << 4)
 
 #define IMX6Q_GPR13_SDMA_STOP_REQ		BIT(30)
 #define IMX6Q_GPR13_CAN2_STOP_REQ		BIT(29)
@@ -392,6 +396,16 @@
 #define IMX6Q_GPR13_SATA_MPLL_CLK_EN		BIT(1)
 #define IMX6Q_GPR13_SATA_TX_EDGE_RATE		BIT(0)
 
+/* For imx6dl iomux gpr register field definitions */
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_MASK		(0x3 << 8)
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_IPU1_DI0	(0x0 << 8)
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_IPU1_DI1	(0x1 << 8)
+#define IMX6DL_GPR3_LVDS1_MUX_CTL_LCDIF		(0x2 << 8)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_MASK		(0x3 << 6)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_IPU1_DI0	(0x0 << 6)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_IPU1_DI1	(0x1 << 6)
+#define IMX6DL_GPR3_LVDS0_MUX_CTL_LCDIF		(0x2 << 6)
+
 /* For imx6sl iomux gpr register field define */
 #define IMX6SL_GPR1_FEC_CLOCK_MUX1_SEL_MASK    (0x3 << 17)
 #define IMX6SL_GPR1_FEC_CLOCK_MUX2_SEL_MASK    (0x1 << 14)
@@ -406,6 +420,15 @@
 #define IMX6SX_GPR1_FEC_CLOCK_MUX_SEL_MASK		(0x3 << 13)
 #define IMX6SX_GPR1_FEC_CLOCK_PAD_DIR_MASK		(0x3 << 17)
 #define IMX6SX_GPR1_FEC_CLOCK_MUX_SEL_EXT		(0x3 << 13)
+
+#define IMX6SX_GPR2_MQS_OVERSAMPLE_MASK			(0x1 << 26)
+#define IMX6SX_GPR2_MQS_OVERSAMPLE_SHIFT		(26)
+#define IMX6SX_GPR2_MQS_EN_MASK				(0x1 << 25)
+#define IMX6SX_GPR2_MQS_EN_SHIFT			(25)
+#define IMX6SX_GPR2_MQS_SW_RST_MASK			(0x1 << 24)
+#define IMX6SX_GPR2_MQS_SW_RST_SHIFT			(24)
+#define IMX6SX_GPR2_MQS_CLK_DIV_MASK			(0xFF << 16)
+#define IMX6SX_GPR2_MQS_CLK_DIV_SHIFT			(16)
 
 #define IMX6SX_GPR4_FEC_ENET1_STOP_REQ			(0x1 << 3)
 #define IMX6SX_GPR4_FEC_ENET2_STOP_REQ			(0x1 << 4)
@@ -435,4 +458,11 @@
 #define IMX6SX_GPR5_DISP_MUX_DCIC1_LVDS			(0x1 << 1)
 #define IMX6SX_GPR5_DISP_MUX_DCIC1_MASK			(0x1 << 1)
 
+#define IMX6SX_GPR5_PCIE_BTNRST			BIT(19)
+#define IMX6SX_GPR5_PCIE_PERST			BIT(18)
+
+#define IMX6SX_GPR12_PCIE_PM_TURN_OFF		BIT(16)
+#define IMX6SX_GPR12_PCIE_TEST_PD		BIT(30)
+#define IMX6SX_GPR12_RX_EQ_MASK			(0x7 << 0)
+#define IMX6SX_GPR12_RX_EQ_2			(0x2 << 0)
 #endif /* __LINUX_IMX6Q_IOMUXC_GPR_H */
