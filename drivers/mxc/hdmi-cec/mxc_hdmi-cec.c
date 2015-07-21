@@ -52,7 +52,6 @@
 
 struct hdmi_cec_priv {
 	u8 la;
-	u8 libcec_la;
 	struct list_head msg_head;
 	struct list_head client_node;
 	struct list_head wakeup_node;
@@ -68,6 +67,7 @@ struct hdmi_cec_event {
 
 struct hdmi_cec_event_list {
 	struct hdmi_cec_event data;
+	u8 libcec_la;
 	struct list_head msg_node;
 };
 
@@ -75,10 +75,12 @@ struct hdmi_cec_shared {
 	bool write_busy;
 	int  receive_error;
 	int  send_error;
-	struct delayed_work hdmi_cec_work, hdmi_msg_trigger;
+	struct delayed_work hdmi_cec_work;
 	spinlock_t i_lock;
+	spinlock_t buffer_lock;
 	struct mutex m_lock;
 	struct list_head client_head;
+	struct list_head buffer_head;
 	int nr_ff;
 	u16 addresses;
 	u8 latest_cec_stat;
@@ -93,7 +95,9 @@ static int hdmi_cec_major;
 static struct class *hdmi_cec_class;
 static u8 open_count = 0;
 
-static wait_queue_head_t hdmi_cec_qs, hdmi_cec_qw;
+static int in_worker = 0;
+
+static wait_queue_head_t hdmi_cec_qs, hdmi_cec_qw, hdmi_cec_buf;
 
 static int SIGNAL_FREE_ARB = 0;
 
@@ -102,17 +106,72 @@ static inline bool la_is_local(u8 la)
 	return (la == 0xf) ? false : hdmi_cec_root.addresses & BIT(la);
 }
 
+static inline u8 get_o(u8 la)
+{
+	return (la >> 4);
+}
+
+static inline u8 get_o_e(struct hdmi_cec_event_list *event)
+{
+	return (event->data.msg[0] >> 4);
+}
+
+static inline u8 get_d(u8 la)
+{
+	return (la & 0x0f);
+}
+
+static inline u8 get_d_e(struct hdmi_cec_event_list *event)
+{
+	return (event->data.msg[0] & 0x0f);
+}
+
+int mxc_hdmi_cec_buffer(uint16_t offset, int len, u8 cec_type, u8 llla)
+{
+	struct hdmi_cec_event_list *event = NULL;
+	unsigned long flags;
+	u8 i;
+
+	event = kzalloc(sizeof(struct hdmi_cec_event_list), GFP_ATOMIC);
+	if (NULL == event) {
+		pr_err("%s: Not enough memory!\n", __func__);
+		return -ENOMEM;
+	}
+	event->data.msg_len = len;
+	if (!event->data.msg_len || event->data.msg_len > MAX_MESSAGE_LEN) {
+		pr_err("%s: Bad message size %d!\n", __func__, event->data.msg_len);
+		kfree(event);
+		return -E2BIG;
+	}
+
+	for (i = 0; i < event->data.msg_len; i++)
+		event->data.msg[i] = hdmi_readb(offset+i);
+
+	event->data.event_type = cec_type;
+	event->libcec_la = llla ? llla : get_o(event->data.msg[0]);
+
+	spin_lock_irqsave(&hdmi_cec_root.buffer_lock, flags);
+	list_add_tail(&event->msg_node, &hdmi_cec_root.buffer_head);
+	spin_unlock_irqrestore(&hdmi_cec_root.buffer_lock, flags);
+
+	wake_up(&hdmi_cec_buf);
+	return 0;
+}
+
 static irqreturn_t mxc_hdmi_cec_isr(int irq, void *data)
 {
 	u8 cec_stat = 0;
+	u8 val;
 	unsigned long flags;
 	irqreturn_t ret = IRQ_HANDLED;
 
 	cec_stat = hdmi_readb(HDMI_IH_CEC_STAT0);
-	if (!cec_stat) {
+	if (!cec_stat || !hdmi_cec_state) {
 		ret = IRQ_NONE;
-		goto irqnone;
+		goto done;
 	}
+
+	pr_debug("%s:  HDMI CEC interrupt handler\n", __func__);
 
 	spin_lock_irqsave(&hdmi_cec_root.i_lock, flags);
 
@@ -126,20 +185,31 @@ static irqreturn_t mxc_hdmi_cec_isr(int irq, void *data)
 		wake_up(&hdmi_cec_qs);
 	}
 	if (cec_stat & (HDMI_IH_CEC_STAT0_NACK | HDMI_IH_CEC_STAT0_DONE)) {
+		mxc_hdmi_cec_buffer(HDMI_CEC_TX_DATA0, hdmi_readb(HDMI_CEC_TX_CNT),
+				  cec_stat & HDMI_IH_CEC_STAT0_NACK ? MESSAGE_TYPE_NOACK : MESSAGE_TYPE_SEND_SUCCESS, 0);
 		hdmi_cec_root.send_error = 0;
+		hdmi_cec_root.write_busy = false;
+		hdmi_writeb(0, HDMI_CEC_TX_CNT);
 		wake_up(&hdmi_cec_qs);
 	}
-	if (cec_stat & HDMI_IH_CEC_STAT0_ARB_LOST) {
+	if (cec_stat & HDMI_IH_CEC_STAT0_EOM) {
+		mxc_hdmi_cec_buffer(HDMI_CEC_RX_DATA0, hdmi_readb(HDMI_CEC_RX_CNT), MESSAGE_TYPE_RECEIVE_SUCCESS, 0);
+		hdmi_writeb(0, HDMI_CEC_LOCK);
+	}
+	if (cec_stat & HDMI_IH_CEC_STAT0_ARB_LOST)
 		SIGNAL_FREE_ARB = SIGNAL_FREE_LOST;
-		pr_debug("%s: ARB LOST \n", __func__);
+
+	pr_debug("%s:  HDMI CEC interrupt received %#x\n", __func__, cec_stat);
+	if (!in_worker) {
+		in_worker = 1;
+		schedule_delayed_work(&hdmi_cec_root.hdmi_cec_work, msecs_to_jiffies(20));
 	}
 
-	hdmi_cec_root.latest_cec_stat = cec_stat;
-	pr_debug("%s:  HDMI CEC interrupt received\n", __func__);
-	schedule_delayed_work(&(hdmi_cec_root.hdmi_cec_work), msecs_to_jiffies(5));
-
 	spin_unlock_irqrestore(&hdmi_cec_root.i_lock, flags);
-irqnone:
+	val = HDMI_IH_CEC_STAT0_WAKEUP | HDMI_IH_CEC_STAT0_ERROR_FOLL;
+	hdmi_writeb(val, HDMI_IH_MUTE_CEC_STAT0);
+
+done:
 	return ret;
 }
 
@@ -177,7 +247,7 @@ void mxc_hdmi_cec_handle(u32 cec_stat)
 		return;
 	pr_debug("%s: enter\n", __func__);
 
-	event = kzalloc(sizeof(struct hdmi_cec_event_list), GFP_KERNEL);
+	event = kzalloc(sizeof(struct hdmi_cec_event_list), GFP_ATOMIC);
 	if (!event) {
 		pr_err("%s: Not enough memory!\n", __func__);
 		return;
@@ -195,98 +265,63 @@ void mxc_hdmi_cec_handle(u32 cec_stat)
 }
 EXPORT_SYMBOL(mxc_hdmi_cec_handle);
 
-void mxc_hdmi_cec_msg(u8 event_type)
+void mxc_hdmi_cec_msg(void)
 {
 	struct hdmi_cec_event_list *event = NULL;
 	struct hdmi_cec_priv *client = NULL;
-	u8 i;
+	unsigned long flags;
 	LIST_HEAD(wakeup);
 
-	event = kzalloc(sizeof(struct hdmi_cec_event_list), GFP_KERNEL);
-	if (NULL == event) {
-		pr_err("%s: Not enough memory!\n", __func__);
-		goto error2;
+	spin_lock_irqsave(&hdmi_cec_root.buffer_lock, flags);
+	event = list_first_entry_or_null(&hdmi_cec_root.buffer_head, struct hdmi_cec_event_list, msg_node);
+	if (!event) {
+		spin_unlock_irqrestore(&hdmi_cec_root.buffer_lock, flags);
+		return;
 	}
-	event->data.msg_len = (event_type == MESSAGE_TYPE_RECEIVE_SUCCESS) ?
-		hdmi_readb(HDMI_CEC_RX_CNT) : hdmi_readb(HDMI_CEC_TX_CNT);
+	list_del_init(&event->msg_node);
+	spin_unlock_irqrestore(&hdmi_cec_root.buffer_lock, flags);
 
-	if (!event->data.msg_len || event->data.msg_len > MAX_MESSAGE_LEN) {
-		pr_err("%s: Bad message size %d!\n", __func__, event->data.msg_len);
-		goto error1;
-	}
-
-	for (i = 0; i < event->data.msg_len; i++)
-		event->data.msg[i] = (event_type == MESSAGE_TYPE_RECEIVE_SUCCESS) ?
-				hdmi_readb(HDMI_CEC_RX_DATA0+i) : hdmi_readb(HDMI_CEC_TX_DATA0+i);
-
-	event->data.event_type = (event_type == MESSAGE_TYPE_NOACK && la_is_local(event->data.msg[0] & 0x0f)) ?
-								MESSAGE_TYPE_SEND_SUCCESS : event_type;
+	event->data.event_type = (event->data.event_type == MESSAGE_TYPE_NOACK && la_is_local(event->data.msg[0] & 0x0f)) ?
+								MESSAGE_TYPE_SEND_SUCCESS : event->data.event_type;
 
 	list_for_each_entry(client, &hdmi_cec_root.client_head, client_node) {
 		if (client->la == 0xff) continue;
+		pr_debug("client %d: MSG from %d to %d, %x. (clla: %d) ET: %d\n", client->la, get_o(event->data.msg[0]), get_d(event->data.msg[0]), event->data.msg[1], event->libcec_la, event->data.event_type);
 
-		if ((event_type == MESSAGE_TYPE_RECEIVE_SUCCESS && 
-					(((event->data.msg[0] & 0x0f) == 15 && client->libcec_la != client->la) || (event->data.msg[0] & 0x0f) == client->la))
+		if ((event->data.event_type == MESSAGE_TYPE_RECEIVE_SUCCESS &&
+					((get_d_e(event) == 15 && event->libcec_la != client->la) || (event->data.msg[0] & 0x0f) == client->la))
 		    ||
-		    (event_type != MESSAGE_TYPE_RECEIVE_SUCCESS &&
-					(client->libcec_la == (int)client->la)) )
+		    (event->data.event_type != MESSAGE_TYPE_RECEIVE_SUCCESS &&
+					((get_o_e(event) == get_d_e(event) && client->la == 15) || client->la == get_o_e(event))) )
 		{
+			pr_debug("writing to %d\n", client->la);
 			__mxc_hdmi_cec_msg(event, client, &wakeup, 0);
 		}
 
 		if ((event->data.event_type == MESSAGE_TYPE_SEND_SUCCESS) &&
 					((la_is_local(event->data.msg[0] & 0x0f) && (event->data.msg[0] & 0x0f) == client->la)
 					||
-					((event->data.msg[0] & 0x0f) == 15 && !client->libcec_la)) )
+					((event->data.msg[0] & 0x0f) == 15 && !event->libcec_la)) )
 		{
+			pr_debug("writing to %d\n", client->la);
 			__mxc_hdmi_cec_msg(event, client, &wakeup, MESSAGE_TYPE_RECEIVE_SUCCESS);
 		}
-		client->libcec_la = 0;
 	}
 	list_for_each_entry(client, &wakeup, wakeup_node)
 		wake_up(&(client->hdmi_cec_qm));
-
-error1:
 	kfree(event);
-error2:
-	if (event_type != MESSAGE_TYPE_RECEIVE_SUCCESS) {
-		mutex_lock(&hdmi_cec_root.m_lock);
-		hdmi_cec_root.write_busy = false;
-		hdmi_writeb(0, HDMI_CEC_TX_CNT);
-		mutex_unlock(&hdmi_cec_root.m_lock);
-		wake_up(&hdmi_cec_qw);
-	}
 }
 
 static void mxc_hdmi_cec_worker(struct work_struct *work)
 {
-	unsigned long flags;
-	u8 val;
-
 	pr_debug("%s: \n", __func__);
-	if (hdmi_cec_root.latest_cec_stat && open_count) {
-		/* The current transmission is successful (for initiator only).*/
-		if (hdmi_cec_root.latest_cec_stat & HDMI_IH_CEC_STAT0_DONE) {
-			mxc_hdmi_cec_msg(MESSAGE_TYPE_SEND_SUCCESS);
-		}
-		/*A frame is not acknowledged in a directly addressed message. Or a frame is negatively acknowledged in
-		a broadcast message (for initiator only).*/
-		if (hdmi_cec_root.latest_cec_stat & HDMI_IH_CEC_STAT0_NACK) {
-			mxc_hdmi_cec_msg(MESSAGE_TYPE_NOACK);
-		}
-		/*EOM is detected so that the received data is ready in the receiver data buffer*/
-		if (hdmi_cec_root.latest_cec_stat & HDMI_IH_CEC_STAT0_EOM) {
-			mxc_hdmi_cec_msg(MESSAGE_TYPE_RECEIVE_SUCCESS);
-			val = hdmi_readb(HDMI_CEC_LOCK);
-			hdmi_writeb(val & ~BIT(0), HDMI_CEC_LOCK);
-		}
-		hdmi_cec_root.latest_cec_stat = 0;
+	while(open_count > 0) {
+		if (!list_empty_careful(&hdmi_cec_root.buffer_head))
+			mxc_hdmi_cec_msg();
+		else
+			wait_event_interruptible(hdmi_cec_buf, !list_empty_careful(&hdmi_cec_root.buffer_head) || open_count < 1);
 	}
-
-	val = HDMI_IH_CEC_STAT0_WAKEUP | HDMI_IH_CEC_STAT0_ERROR_FOLL;
-	spin_lock_irqsave(&hdmi_cec_root.i_lock, flags);
-	hdmi_writeb(val, HDMI_IH_MUTE_CEC_STAT0);
-	spin_unlock_irqrestore(&hdmi_cec_root.i_lock, flags);
+	in_worker = 0;
 	pr_debug("%s:  exit\n", __func__);
 }
 
@@ -320,16 +355,6 @@ static int hdmi_cec_open(struct inode *inode, struct file *filp)
 	mutex_unlock(&hdmi_cec_root.m_lock);
 
 	return 0;
-}
-
-/*
- * run delayed mxc_hdmi_cec_msg() to deal with msgs to LAs registered on local CEC.
- * imx CEC is not transporting such messages through (local) interface
- * (messages with destination the same as any regstered LA)
- */
-static void mxc_hdmi_cec_msg_trigger(struct work_struct *work)
-{
-	mxc_hdmi_cec_msg(MESSAGE_TYPE_SEND_SUCCESS);
 }
 
 static ssize_t hdmi_cec_read(struct file *file, char __user *buf, size_t count,
@@ -403,12 +428,12 @@ static ssize_t hdmi_cec_write(struct file *file, const char __user *buf,
 	for (i = 0; i < count; i++)
 		hdmi_writeb(msg[i], HDMI_CEC_TX_DATA0+i);
 
-	hdmi_cec->libcec_la = hdmi_cec->la;
-	if (la_is_local(msg[0] & 0x0f)) {
+	if (get_d(msg[0]) == 15) {
 		ret = count;
-		schedule_delayed_work(&(hdmi_cec_root.hdmi_msg_trigger), msecs_to_jiffies(5));
+		mxc_hdmi_cec_buffer(HDMI_CEC_TX_DATA0, count, MESSAGE_TYPE_RECEIVE_SUCCESS, hdmi_cec->la);
 		pr_debug("%s:  wait_event la_is_local\n", __func__);
-	} else
+		hdmi_cec_root.write_busy = false;
+	}
 
 	do {
 		val = hdmi_readb(HDMI_CEC_CTRL); val |= 0x01; val &= ~0x6;
@@ -421,7 +446,6 @@ static ssize_t hdmi_cec_write(struct file *file, const char __user *buf,
 		if (hdmi_cec_root.send_error > 5 || ret < 2) {
 			hdmi_writeb(0, HDMI_CEC_TX_CNT);
 			hdmi_cec_root.write_busy = false;
-			wake_up(&hdmi_cec_qw);
 			ret = -EIO;
 		} else if (hdmi_cec_root.send_error && ret > 1) {
 			pr_debug("%s: --- resending msg\n", __func__);
@@ -433,6 +457,7 @@ static ssize_t hdmi_cec_write(struct file *file, const char __user *buf,
 	} while(!ret);
 
 	mutex_unlock(&hdmi_cec_root.m_lock);
+	wake_up(&hdmi_cec_qw);
 	return ret;
 }
 
@@ -609,6 +634,8 @@ static int hdmi_cec_release(struct inode *inode, struct file *filp)
 	hdmi_cec_set_address(-1, hdmi_cec);
 	if (!--open_count)
 		hdmi_cec_hwdisable();
+	wake_up(&hdmi_cec_buf);
+
 	while (!list_empty(&hdmi_cec->msg_head)) {
 		struct hdmi_cec_event_list *event = NULL;
 
@@ -711,14 +738,15 @@ static int hdmi_cec_dev_probe(struct platform_device *pdev)
 
 	init_waitqueue_head(&hdmi_cec_qs);
 	init_waitqueue_head(&hdmi_cec_qw);
+	init_waitqueue_head(&hdmi_cec_buf);
 
 	INIT_LIST_HEAD(&hdmi_cec_root.client_head);
+	INIT_LIST_HEAD(&hdmi_cec_root.buffer_head);
 
 	mutex_init(&hdmi_cec_root.m_lock);
 	hdmi_cec_root.addresses = 0;
 	platform_set_drvdata(pdev, &hdmi_cec_root);
 	INIT_DELAYED_WORK(&hdmi_cec_root.hdmi_cec_work, mxc_hdmi_cec_worker);
-	INIT_DELAYED_WORK(&hdmi_cec_root.hdmi_msg_trigger, mxc_hdmi_cec_msg_trigger);
 
 	dev_info(&pdev->dev, "%s: HDMI CEC initialized\n", __func__);
 	hdmi_cec_ready = 1;
