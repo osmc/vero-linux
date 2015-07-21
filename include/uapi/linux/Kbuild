@@ -267,6 +267,7 @@ header-y += msdos_fs.h
 header-y += msg.h
 header-y += mtio.h
 header-y += mxcfb.h
+header-y += mxc_dcic.h
 header-y += ipu.h
 header-y += nbd.h
 header-y += ncp_fs.h
