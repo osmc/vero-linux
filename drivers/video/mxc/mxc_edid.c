@@ -723,7 +723,7 @@ int mxc_edid_mode_to_vic(const struct fb_videomode *mode, u32 mode_mask)
 {
 	int i;
 	bool use_aspect = (mode->vmode & FB_VMODE_ASPECT_MASK);
-	u32 use_mask = mode_mask ? mode_mask : FB_VMODE_MASK ^ FB_VMODE_3D_MASK;
+	u32 use_mask = mode_mask ? mode_mask : FB_VMODE_MASK ^ (FB_VMODE_3D_MASK | FB_VMODE_FRACTIONAL);
 
 	for (i = 0; i < ARRAY_SIZE(mxc_cea_mode); i++) {
 		if (mxc_edid_fb_mode_is_equal(use_aspect, mode, &mxc_cea_mode[i], use_mask))

@@ -249,9 +249,13 @@ struct fb_bitfield {
 				 BIT(13) | \
 				 BIT(14))
 
+#define FB_VMODE_FRACTIONAL	BIT(15)
+
 #define FB_VMODE_MASK		(FB_VMODE_MASK_SIMPLE | \
 				 FB_VMODE_3D_MASK     | \
-				 FB_VMODE_ASPECT_MASK)
+				 FB_VMODE_ASPECT_MASK | \
+				 FB_VMODE_FRACTIONAL)
+
 
 /*
  * Display rotation support
