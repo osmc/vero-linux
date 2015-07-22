@@ -20,6 +20,7 @@
 #include <linux/fb.h>
 #include <linux/console.h>
 #include <linux/module.h>
+#include <linux/ctype.h>
 
 #define FB_SYSFS_FLAG_ATTR 1
 
@@ -126,6 +127,8 @@ static int mode_string(char *buf, unsigned int offset,
 	if (mode->vmode & FB_VMODE_3D_FRAME_PACK)
 		m = 'F';
 
+	if (mode->vmode & FB_VMODE_FRACTIONAL)
+		m = tolower(m);
 	return snprintf(&buf[offset], PAGE_SIZE - offset, "%c:%dx%d%c-%d\n",
 	                m, mode->xres, mode->yres, v, mode->refresh);
 }

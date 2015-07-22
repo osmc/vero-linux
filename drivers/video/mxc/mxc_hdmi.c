@@ -26,7 +26,6 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-//#define DEBUG
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -146,6 +145,7 @@ struct hdmi_data_info {
 	unsigned int rgb_out_enable;
 	unsigned int rgb_quant_range;
 	unsigned int enable_3d;
+	unsigned int enable_fract;
 	struct hdmi_vmode video_mode;
 };
 
@@ -227,6 +227,10 @@ static char *enable_3d = "1";
 module_param(enable_3d, charp, S_IRUGO);
 MODULE_PARM_DESC(enable_3d, "3D modes enabled (0/1)");
 
+static char *enable_fract = "1";
+module_param(enable_fract, charp, S_IRUGO);
+MODULE_PARM_DESC(enable_fract, "Fractional modes enabled (0/1)");
+
 static struct platform_device_id imx_hdmi_devtype[] = {
 	{
 		.name = "hdmi-imx6DL",
@@ -254,8 +258,11 @@ static inline int cpu_is_imx6dl(struct mxc_hdmi *hdmi)
 
 static void dump_fb_videomode(struct fb_videomode *m)
 {
-	pr_debug("fb_videomode = %ux%u@%uHz (%ukHz) %u %u %u %u %u %u %u %u %u\n",
-		m->xres, m->yres, m->refresh, m->pixclock, m->left_margin,
+	pr_debug("fb_videomode = %ux%u%c-%u.%uHz (%ukHz) %u %u %u %u %u %u %u %u %u\n",
+		m->xres, m->yres, m->vmode & FB_VMODE_INTERLACED ? 'i' : 'p',
+		m->refresh - (int)(m->vmode & FB_VMODE_FRACTIONAL ? 1 : 0),
+		m->refresh * (int)(m->vmode & FB_VMODE_FRACTIONAL ? 999 : 1000) % 1000,
+		m->pixclock, m->left_margin,
 		m->right_margin, m->upper_margin, m->lower_margin,
 		m->hsync_len, m->vsync_len, m->sync, m->vmode, m->flag);
 }
@@ -432,6 +439,48 @@ static ssize_t mxc_hdmi_store_enable_3d(struct device *dev,
 static DEVICE_ATTR(enable_3d, S_IRUGO | S_IWUSR,
 				mxc_hdmi_show_enable_3d,
 				mxc_hdmi_store_enable_3d);
+
+static ssize_t mxc_hdmi_show_enable_fract(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct mxc_hdmi *hdmi = dev_get_drvdata(dev);
+
+	switch (hdmi->hdmi_data.enable_fract) {
+	case 0:
+		strcpy(buf, "disabled\n");
+		break;
+	default:
+		strcpy(buf, "enabled\n");
+		break;
+	};
+
+	return strlen(buf);
+}
+
+static ssize_t mxc_hdmi_store_enable_fract(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct mxc_hdmi *hdmi = dev_get_drvdata(dev);
+	int ret = count;
+
+	if (sysfs_streq("disable", buf)) {
+		hdmi->hdmi_data.enable_fract = 0;
+	} else if (sysfs_streq("0", buf)) {
+		hdmi->hdmi_data.enable_fract = 0;
+	} else {
+		hdmi->hdmi_data.enable_fract = 1;
+	}
+
+	mxc_hdmi_edid_rebuild_modelist(hdmi);
+	if (hdmi->cable_plugin)
+		mxc_hdmi_set_mode(hdmi);
+
+	return ret;
+}
+
+static DEVICE_ATTR(enable_fract, S_IRUGO | S_IWUSR,
+				mxc_hdmi_show_enable_fract,
+				mxc_hdmi_store_enable_fract);
 
 static ssize_t mxc_hdmi_show_hdcp_enable(struct device *dev,
 		struct device_attribute *attr, char *buf)
@@ -1631,10 +1680,7 @@ static void hdmi_av_composer(struct mxc_hdmi *hdmi)
 	vmode->mHSyncPolarity = ((fb_mode.sync & FB_SYNC_HOR_HIGH_ACT) != 0);
 	vmode->mVSyncPolarity = ((fb_mode.sync & FB_SYNC_VERT_HIGH_ACT) != 0);
 	vmode->mInterlaced = ((fb_mode.vmode & FB_VMODE_INTERLACED) != 0);
-	vmode->mPixelClock = (fb_mode.xres + fb_mode.left_margin +
-		fb_mode.right_margin + fb_mode.hsync_len) * (fb_mode.yres +
-		fb_mode.upper_margin + fb_mode.lower_margin +
-		fb_mode.vsync_len) * fb_mode.refresh;
+	vmode->mPixelClock = (u32) (PICOS2KHZ(fb_mode.pixclock) * 1000UL);
 
 	dev_dbg(&hdmi->pdev->dev, "final pixclk = %d\n", vmode->mPixelClock);
 
@@ -1651,7 +1697,7 @@ static void hdmi_av_composer(struct mxc_hdmi *hdmi)
 		HDMI_FC_INVIDCONF_DE_IN_POLARITY_ACTIVE_HIGH :
 		HDMI_FC_INVIDCONF_DE_IN_POLARITY_ACTIVE_LOW);
 
-	if (hdmi->vic == 39)
+	if (fb_mode.vmode & FB_VMODE_FRACTIONAL)
 		inv_val |= HDMI_FC_INVIDCONF_R_V_BLANK_IN_OSC_ACTIVE_HIGH;
 	else
 		inv_val |= (vmode->mInterlaced ?
@@ -2047,6 +2093,7 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 {
 	int i, j, k, nvic = 0, vic;
 	struct fb_videomode *mode;
+	struct fb_videomode mode2;
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
@@ -2074,6 +2121,9 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 		   (mode->flag == FB_MODE_IS_VESA)))
 				continue;
 
+		if (!mode->xres || !mode->refresh)
+			continue;
+
 		if (!(mode->vmode & FB_VMODE_ASPECT_MASK)) {
 			if (mode->yres == (mode->xres * 3)/4)
 				mode->vmode |= FB_VMODE_ASPECT_4_3;
@@ -2083,7 +2133,7 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 
 		dev_info(&hdmi->pdev->dev, "Added mode: %d, vic: %d", i, vic);
 		dev_info(&hdmi->pdev->dev,
-			"xres = %d, yres = %d, ratio = %s, freq = %d, vmode = %d, flag = %d\n",
+			"xres = %d, yres = %d, ratio = %s, freq = %d, vmode = %d, flag = %d, pclk = %d\n",
 			hdmi->fbi->monspecs.modedb[i].xres,
 			hdmi->fbi->monspecs.modedb[i].yres,
 			mode->vmode & FB_VMODE_ASPECT_1 ? "1" :
@@ -2093,9 +2143,17 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 			    mode->vmode & FB_VMODE_ASPECT_16_9 ? "16/9" : "n/a",
 			hdmi->fbi->monspecs.modedb[i].refresh,
 			hdmi->fbi->monspecs.modedb[i].vmode,
-			hdmi->fbi->monspecs.modedb[i].flag);
+			hdmi->fbi->monspecs.modedb[i].flag,
+			mode->pixclock);
 
 		fb_add_videomode(mode, &hdmi->fbi->modelist);
+		if (hdmi->hdmi_data.enable_fract && (mode->refresh == 24 || mode->refresh == 30 || mode->refresh == 60)) {
+			memcpy(&mode2, mode, sizeof(struct fb_videomode));
+			mode2.vmode = mode->vmode | FB_VMODE_FRACTIONAL;
+			mode2.pixclock = PICOS2KHZ(KHZ2PICOS(mode2.pixclock) * 1000/1001);
+			fb_add_videomode(&mode2, &hdmi->fbi->modelist);
+		}
+
 		if (!hdmi->hdmi_data.enable_3d || !vic)
 			continue;
 
@@ -2985,6 +3043,14 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 		hdmi->hdmi_data.enable_3d = 1;
 	}
 
+	if (!strcasecmp(enable_fract, "disable")) {
+		hdmi->hdmi_data.enable_fract = 0;
+	} else if (!strcasecmp(enable_fract, "0")) {
+		hdmi->hdmi_data.enable_fract = 0;
+	} else {
+		hdmi->hdmi_data.enable_fract = 1;
+	}
+
 	ret = devm_request_irq(&hdmi->pdev->dev, irq, mxc_hdmi_hotplug, IRQF_SHARED,
 			dev_name(&hdmi->pdev->dev), hdmi);
 	if (ret < 0) {
@@ -3020,6 +3086,11 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 	if (ret < 0)
 		dev_warn(&hdmi->pdev->dev,
 			"cound not create sys node for enable_3d\n");
+
+	ret = device_create_file(&hdmi->pdev->dev, &dev_attr_enable_fract);
+	if (ret < 0)
+		dev_warn(&hdmi->pdev->dev,
+			"cound not create sys node for enable_fract\n");
 
 	ret = device_create_file(&hdmi->pdev->dev, &dev_attr_hdcp_enable);
 	if (ret < 0)
