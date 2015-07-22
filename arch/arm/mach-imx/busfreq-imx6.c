@@ -54,7 +54,7 @@
 #include "hardware.h"
 #include "common.h"
 
-int vpu352 = 0;
+int vpu352 = 1;
 
 static RAW_NOTIFIER_HEAD(busfreq_notifier_chain);
 
