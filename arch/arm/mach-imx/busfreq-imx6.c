@@ -53,7 +53,7 @@
 #define DDR3_AUDIO_CLK		50000000
 #define LPDDR2_AUDIO_CLK	100000000
 
-int vpu352 = 0;
+int vpu352 = 1;
 
 int high_bus_freq_mode;
 int med_bus_freq_mode;
