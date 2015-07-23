@@ -47,7 +47,7 @@
 
 / {
 	chosen {
-		bootargs = "quiet console=ttymxc0,115200 rw root=/dev/mmcblk0p2";
+		bootargs = "placeholder-flags";
 	};
 
 	aliases {
@@ -337,7 +337,7 @@
 	pinctrl-1 = <&pinctrl_vero_usdhc2_aux &pinctrl_vero_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_vero_usdhc2_aux &pinctrl_vero_usdhc2_200mhz>;
 	vmmc-supply = <&reg_3p3v>;
-	cd-gpios = <&gpio1 4 0>;
+	cd-gpios = <&gpio1 4 GPIO_ACTIVE_LOW>;
 	status = "okay";
 	no-1-8-v;
 };
