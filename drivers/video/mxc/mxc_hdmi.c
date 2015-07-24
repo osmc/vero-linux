@@ -2100,7 +2100,6 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 {
 	int i, j, k, nvic = 0, vic;
 	struct fb_videomode *mode;
-	struct fb_videomode mode2;
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
@@ -2138,27 +2137,42 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 				mode->vmode |= FB_VMODE_ASPECT_16_9;
 		}
 
-		dev_info(&hdmi->pdev->dev, "Added mode: %d, vic: %d", i, vic);
-		dev_info(&hdmi->pdev->dev,
-			"xres = %d, yres = %d, ratio = %s, freq = %d, vmode = %d, flag = %d, pclk = %d\n",
-			hdmi->fbi->monspecs.modedb[i].xres,
-			hdmi->fbi->monspecs.modedb[i].yres,
-			mode->vmode & FB_VMODE_ASPECT_1 ? "1" :
-			    mode->vmode & FB_VMODE_ASPECT_4_3 ? "4/3" :
-			    mode->vmode & FB_VMODE_ASPECT_5_4 ? "5/4" :
-			    mode->vmode & FB_VMODE_ASPECT_16_10 ? "16/10" :
-			    mode->vmode & FB_VMODE_ASPECT_16_9 ? "16/9" : "n/a",
-			hdmi->fbi->monspecs.modedb[i].refresh,
-			hdmi->fbi->monspecs.modedb[i].vmode,
-			hdmi->fbi->monspecs.modedb[i].flag,
-			mode->pixclock);
+		for (j = 0; j < 1 || (hdmi->hdmi_data.enable_fract && j < 2); j++) {
+			struct fb_videomode *tm = mode;
+			struct fb_videomode mode2;
+			char refresh[10];
 
-		fb_add_videomode(mode, &hdmi->fbi->modelist);
-		if (hdmi->hdmi_data.enable_fract && (mode->refresh == 24 || mode->refresh == 30 || mode->refresh == 60)) {
-			memcpy(&mode2, mode, sizeof(struct fb_videomode));
-			mode2.vmode = mode->vmode | FB_VMODE_FRACTIONAL;
-			mode2.pixclock = PICOS2KHZ(KHZ2PICOS(mode2.pixclock) * 1000/1001);
-			fb_add_videomode(&mode2, &hdmi->fbi->modelist);
+			if (j == 1 && (mode->refresh != 24 && mode->refresh != 30 && mode->refresh != 60))
+				break;
+
+			switch (j) {
+			case 1:
+				memcpy(&mode2, mode, sizeof(struct fb_videomode));
+				mode2.vmode = mode->vmode | FB_VMODE_FRACTIONAL;
+				mode2.pixclock = mode2.pixclock * 1001 / 1000;
+				fb_add_videomode(&mode2, &hdmi->fbi->modelist);
+				tm = &mode2;
+				break;
+			default:
+				break;
+			}
+
+			get_refresh_str(tm, refresh);
+			dev_info(&hdmi->pdev->dev, "Added mode: %d, vic: %d %s", i, vic, j == 1 ? " fractional" : "");
+			dev_info(&hdmi->pdev->dev,
+				"xres = %d, yres = %d, ratio = %s, freq = %s, vmode = %d, flag = %d, pclk = %d\n",
+				tm->xres,
+				tm->yres,
+				tm->vmode & FB_VMODE_ASPECT_1 ? "1" :
+				    mode->vmode & FB_VMODE_ASPECT_4_3 ? "4/3" :
+				    mode->vmode & FB_VMODE_ASPECT_5_4 ? "5/4" :
+				    mode->vmode & FB_VMODE_ASPECT_16_10 ? "16/10" :
+				    mode->vmode & FB_VMODE_ASPECT_16_9 ? "16/9" : "n/a",
+				refresh,
+				tm->vmode,
+				tm->flag,
+				tm->pixclock);
+			fb_add_videomode(tm, &hdmi->fbi->modelist);
 		}
 
 		if (!hdmi->hdmi_data.enable_3d || !vic)
