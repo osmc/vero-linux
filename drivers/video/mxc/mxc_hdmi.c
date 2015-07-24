@@ -256,13 +256,20 @@ static inline int cpu_is_imx6dl(struct mxc_hdmi *hdmi)
 	return hdmi->cpu_type == IMX6DL_HDMI;
 }
 
+static inline void get_refresh_str(struct fb_videomode *m, char *refresh)
+{
+	snprintf(refresh, 10, "%u.%uHz", m->refresh - (int)(m->vmode & FB_VMODE_FRACTIONAL ? 1 : 0),
+				m->refresh * (int)(m->vmode & FB_VMODE_FRACTIONAL ? 999 : 1000) % 1000);
+}
+
 static void dump_fb_videomode(struct fb_videomode *m)
 {
-	pr_debug("fb_videomode = %ux%u%c-%u.%uHz (%ukHz) %u %u %u %u %u %u %u %u %u\n",
+	char refresh[10];
+
+	get_refresh_str(m, refresh);
+	pr_debug("fb_videomode = %ux%u%c-%s (%ukHz) %u %u %u %u %u %u %u %u %u\n",
 		m->xres, m->yres, m->vmode & FB_VMODE_INTERLACED ? 'i' : 'p',
-		m->refresh - (int)(m->vmode & FB_VMODE_FRACTIONAL ? 1 : 0),
-		m->refresh * (int)(m->vmode & FB_VMODE_FRACTIONAL ? 999 : 1000) % 1000,
-		m->pixclock, m->left_margin,
+		refresh, m->pixclock, m->left_margin,
 		m->right_margin, m->upper_margin, m->lower_margin,
 		m->hsync_len, m->vsync_len, m->sync, m->vmode, m->flag);
 }
