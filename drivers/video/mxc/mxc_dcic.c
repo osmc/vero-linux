@@ -61,8 +61,9 @@
 
 static wait_queue_head_t mxc_dcic_wait;
 static int mxc_dcic_vsync;
-static int mxc_dcic_irq;
+static uint16_t mxc_dcic_irq;
 static unsigned long mxc_dcic_counter;
+static uint16_t mxc_dcic_clients;
 
 static const struct dcic_mux imx6q_dcic0_mux[] = {
 	{
@@ -305,7 +306,7 @@ static irqreturn_t dcic_irq_handler(int irq, void *data)
 	if (!mxc_dcic_vsync)
 		dcic_int_disable(dcic);
 	else {
-		mxc_dcic_irq = 1;
+		mxc_dcic_irq = -1;
 		mxc_dcic_counter++;
 	}
 
@@ -349,34 +350,59 @@ static int dcic_configure(struct dcic_data *dcic, unsigned int sync)
 
 static int dcic_open(struct inode *inode, struct file *file)
 {
-	struct dcic_data *dcic;
+	struct dcic_data *dcic = container_of(inode->i_cdev, struct dcic_data, cdev);
+	struct dcic_private *dcic_client;
+	int i = 0;
 
-	dcic = container_of(inode->i_cdev, struct dcic_data, cdev);
+	dcic_client = devm_kzalloc(dcic->dev,
+				sizeof(struct dcic_private),
+				GFP_KERNEL);
+	if (!dcic_client) {
+		dev_err(dcic->dev, "Cannot allocate device data\n");
+		return -ENOMEM;
+	}
 
 	mutex_lock(&dcic->lock);
 
-	clk_prepare_enable(dcic->disp_axi_clk);
-	clk_prepare_enable(dcic->dcic_clk);
+	if (mxc_dcic_clients == 0xffff) {
+		mutex_unlock(&dcic->lock);
+		return -EBUSY;
+	} else if (!mxc_dcic_clients) {
+		clk_prepare_enable(dcic->disp_axi_clk);
+		clk_prepare_enable(dcic->dcic_clk);
+	}
 
-	file->private_data = dcic;
+	dcic_client->dcic = dcic;
+	file->private_data = dcic_client;
+
+	while (mxc_dcic_clients & BIT(i))
+		i++;
+	mxc_dcic_clients |= BIT(i);
+	dcic_client->client_id |= BIT(i);
+
 	mutex_unlock(&dcic->lock);
 	return 0;
 }
 
 static int dcic_release(struct inode *inode, struct file *file)
 {
-	struct dcic_data *dcic = file->private_data;
+	struct dcic_private *dcic_client = file->private_data;
+	struct dcic_data *dcic = dcic_client->dcic;
 	u32 i;
 
 	mutex_lock(&dcic->lock);
 
-	for (i = 0; i < 16; i++)
-		roi_disable(dcic, i);
+	mxc_dcic_clients &= ~dcic_client->client_id;
+	if (!mxc_dcic_clients) {
+		for (i = 0; i < 16; i++)
+			roi_disable(dcic, i);
 
-	clk_disable_unprepare(dcic->dcic_clk);
-	clk_disable_unprepare(dcic->disp_axi_clk);
+		clk_disable_unprepare(dcic->dcic_clk);
+		clk_disable_unprepare(dcic->disp_axi_clk);
+	}
 
 	mutex_unlock(&dcic->lock);
+	devm_kfree(dcic->dev, dcic_client);
 	return 0;
 }
 
@@ -402,10 +428,18 @@ static long dcic_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
 	int __user *argp = (void __user *)arg;
-	struct dcic_data *dcic = file->private_data;
+	struct dcic_private *dcic_client = file->private_data;
+	struct dcic_data *dcic = dcic_client->dcic;
 	struct roi_params roi_param;
 	unsigned int sync;
 	int ret = 0;
+	int i, t = 0;
+
+	if (cmd == DCIC_IOC_STOP_VSYNC || cmd == DCIC_IOC_START_VSYNC || cmd == DCIC_IOC_CONFIG_DCIC) {
+		for (i = 0; i < 16; i++)
+			if (mxc_dcic_clients & BIT(i) && ++t > 1)
+				return 0;
+	}
 
 	switch (cmd) {
 	case DCIC_IOC_CONFIG_DCIC:
@@ -475,19 +509,20 @@ static long dcic_ioctl(struct file *file,
 static ssize_t dcic_read(struct file *file, char __user *buf, size_t count,
 			    loff_t *ppos)
 {
+	struct dcic_private *dcic_client = file->private_data;
 	int ret = 0;
 
 	do {
-		if (mxc_dcic_irq) {
+		if (mxc_dcic_irq & dcic_client->client_id) {
 			count = min(sizeof(unsigned long), count);
 			ret = copy_to_user(buf, &mxc_dcic_counter, count) ? -EFAULT : count;
-			mxc_dcic_irq = 0;
+			mxc_dcic_irq &= ~dcic_client->client_id;
 			break;
 		}
 		if (file->f_flags & O_NONBLOCK) {
 			ret = -EAGAIN;
 		}
-		else if (wait_event_interruptible(mxc_dcic_wait, mxc_dcic_irq))
+		else if (wait_event_interruptible(mxc_dcic_wait, mxc_dcic_irq & dcic_client->client_id))
 			ret = -ERESTARTSYS;
 	} while(!ret);
 
@@ -616,6 +651,7 @@ static int dcic_probe(struct platform_device *pdev)
 	init_waitqueue_head(&mxc_dcic_wait);
 	mxc_dcic_vsync = 0;
 	mxc_dcic_irq = 0;
+	mxc_dcic_clients = 0;
 
 	return 0;
 
