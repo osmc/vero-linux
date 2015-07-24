@@ -178,9 +178,9 @@ static irqreturn_t mxc_hdmi_cec_isr(int irq, void *data)
 	hdmi_writeb(0x7f, HDMI_IH_MUTE_CEC_STAT0);
 	hdmi_writeb(cec_stat, HDMI_IH_CEC_STAT0);
 
-	if (cec_stat & HDMI_IH_CEC_STAT0_ERROR_INIT) {
+	if (cec_stat & (HDMI_IH_CEC_STAT0_ERROR_INIT | HDMI_IH_CEC_STAT0_ARB_LOST)) {
 		hdmi_cec_root.send_error++;
-		SIGNAL_FREE_ARB = SIGNAL_FREE_TIME_RESEND;
+		SIGNAL_FREE_ARB = cec_stat & HDMI_IH_CEC_STAT0_ERROR_INIT ? SIGNAL_FREE_TIME_RESEND : SIGNAL_FREE_LOST;
 		pr_debug("%s:  error %d\n", __func__, hdmi_cec_root.send_error);
 		wake_up(&hdmi_cec_qs);
 	}
@@ -189,15 +189,13 @@ static irqreturn_t mxc_hdmi_cec_isr(int irq, void *data)
 				  cec_stat & HDMI_IH_CEC_STAT0_NACK ? MESSAGE_TYPE_NOACK : MESSAGE_TYPE_SEND_SUCCESS, 0);
 		hdmi_cec_root.send_error = 0;
 		hdmi_cec_root.write_busy = false;
-		hdmi_writeb(0, HDMI_CEC_TX_CNT);
 		wake_up(&hdmi_cec_qs);
+		hdmi_writeb(0, HDMI_CEC_TX_CNT);
 	}
 	if (cec_stat & HDMI_IH_CEC_STAT0_EOM) {
 		mxc_hdmi_cec_buffer(HDMI_CEC_RX_DATA0, hdmi_readb(HDMI_CEC_RX_CNT), MESSAGE_TYPE_RECEIVE_SUCCESS, 0);
 		hdmi_writeb(0, HDMI_CEC_LOCK);
 	}
-	if (cec_stat & HDMI_IH_CEC_STAT0_ARB_LOST)
-		SIGNAL_FREE_ARB = SIGNAL_FREE_LOST;
 
 	pr_debug("%s:  HDMI CEC interrupt received %#x\n", __func__, cec_stat);
 	if (!in_worker) {
