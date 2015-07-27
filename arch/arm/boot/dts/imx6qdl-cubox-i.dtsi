@@ -338,6 +338,7 @@
 	vmmc-supply = <&reg_3p3v>;
 	cd-gpios = <&gpio1 4 0>;
 	status = "okay";
+	no-1-8-v;
 };
 
 &dcic1 {
