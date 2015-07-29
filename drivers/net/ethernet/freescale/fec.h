@@ -233,20 +233,21 @@ struct bufdesc_ex {
 #define BD_SC_CD	((ushort)0x0001)	/* ?? */
 
 /* Buffer descriptor control/status used by Ethernet receive.
- */
-#define BD_ENET_RX_EMPTY	((ushort)0x8000)
-#define BD_ENET_RX_WRAP		((ushort)0x2000)
-#define BD_ENET_RX_INTR		((ushort)0x1000)
-#define BD_ENET_RX_LAST		((ushort)0x0800)
-#define BD_ENET_RX_FIRST	((ushort)0x0400)
-#define BD_ENET_RX_MISS		((ushort)0x0100)
-#define BD_ENET_RX_LG		((ushort)0x0020)
-#define BD_ENET_RX_NO		((ushort)0x0010)
-#define BD_ENET_RX_SH		((ushort)0x0008)
-#define BD_ENET_RX_CR		((ushort)0x0004)
-#define BD_ENET_RX_OV		((ushort)0x0002)
-#define BD_ENET_RX_CL		((ushort)0x0001)
-#define BD_ENET_RX_STATS	((ushort)0x013f)	/* All status bits */
+*/
+#define BD_ENET_RX_EMPTY        ((ushort)0x8000)
+#define BD_ENET_RX_WRAP         ((ushort)0x2000)
+#define BD_ENET_RX_INTR         ((ushort)0x1000)
+#define BD_ENET_RX_LAST         ((ushort)0x0800)
+#define BD_ENET_RX_FIRST        ((ushort)0x0400)
+#define BD_ENET_RX_MISS         ((ushort)0x0100)
+#define BD_ENET_RX_LG           ((ushort)0x0020)
+#define BD_ENET_RX_NO           ((ushort)0x0010)
+#define BD_ENET_RX_SH           ((ushort)0x0008)
+#define BD_ENET_RX_CR           ((ushort)0x0004)
+#define BD_ENET_RX_OV           ((ushort)0x0002)
+#define BD_ENET_RX_CL           ((ushort)0x0001)
+#define BD_ENET_RX_STATS        ((ushort)0x013f)        /* All status bits */
+#define BD_ENET_RX_ERROR	((ushort)0x003f)
 
 /* Enhanced buffer descriptor control/status used by Ethernet receive */
 #define BD_ENET_RX_VLAN		0x00000004
