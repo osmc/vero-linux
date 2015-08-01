@@ -2253,7 +2253,7 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 
 	fb_var_to_videomode(&m, &var);
 
-	mode = mxc_fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
+	mode = mxc_fb_find_nearest_mode(&m, &hdmi->fbi->modelist, false);
 	if (!mode) {
 		pr_err("%s: could not find mode in modelist\n", __func__);
 		return;
@@ -2551,7 +2551,7 @@ static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event)
 		memcpy(&hdmi->previous_non_vga_mode, &hdmi->fbi->var,
 		       sizeof(struct fb_var_screeninfo));
 		if (!list_empty(&hdmi->fbi->modelist)) {
-			edid_mode = mxc_fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
+			edid_mode = mxc_fb_find_nearest_mode(&m, &hdmi->fbi->modelist, false);
 			pr_debug("edid mode vx:%d vy:%d", hdmi->fbi->var.xres_virtual, hdmi->fbi->var.yres_virtual);
 			dump_fb_videomode((struct fb_videomode *)edid_mode);
 			/* update fbi mode */
