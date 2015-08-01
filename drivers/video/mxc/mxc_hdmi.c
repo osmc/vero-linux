@@ -2195,8 +2195,8 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 			for (j = 0; j < sizeof(stereo_mandatory_modes) / sizeof(struct stereo_mandatory_mode); j++) {
 				if (stereo_mandatory_modes[j].rfc_refresh != k)
 					continue;
-				mxc_fb_add_videomode(stereo_mandatory_modes[j].rfc_parent_cea_mode, &hdmi->fbi->modelist,
-							stereo_mandatory_modes[j].flag, stereo_mandatory_modes[j].vmode);
+				mxc_fb_add_videomode(hdmi, stereo_mandatory_modes[j].rfc_parent_cea_mode, &hdmi->fbi->modelist,
+							stereo_mandatory_modes[j].flag, stereo_mandatory_modes[j].vmode, 1000);
 			}
 		    }
 		}
@@ -2204,13 +2204,13 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 		if ((hdmi->edid_cfg.hdmi_3d_multi_present == 2 && hdmi->edid_cfg.hdmi_3d_mask_all & (1 << (nvic-1))) ||
 		    (hdmi->edid_cfg.hdmi_3d_multi_present == 1 && nvic <= 16)) {
 			if (hdmi->edid_cfg.hdmi_3d_struct_all & 0x1)
-				mxc_fb_add_videomode(mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_FRAME_PACK);
+				mxc_fb_add_videomode(hdmi, mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_FRAME_PACK, 1000);
 			if (hdmi->edid_cfg.hdmi_3d_struct_all & 0x6)
-				mxc_fb_add_videomode(mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_SBS_FULL);
+				mxc_fb_add_videomode(hdmi, mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_SBS_FULL, 1000);
 			if (hdmi->edid_cfg.hdmi_3d_struct_all & 0x40)
-				mxc_fb_add_videomode(mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_TOP_BOTTOM);
+				mxc_fb_add_videomode(hdmi, mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_TOP_BOTTOM, 1000);
 			if (hdmi->edid_cfg.hdmi_3d_struct_all & 0x100)
-				mxc_fb_add_videomode(mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_SBS_HALF);
+				mxc_fb_add_videomode(hdmi, mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_SBS_HALF, 1000);
 		}
 
 		for (j = 0; j < hdmi->edid_cfg.hdmi_3d_len; j++) {
@@ -2218,13 +2218,13 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 				continue;
 
 			if (hdmi->edid_cfg.hdmi_3d_format[j].struct_3d == 0)
-				mxc_fb_add_videomode(mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_FRAME_PACK);
+				mxc_fb_add_videomode(hdmi, mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_FRAME_PACK, 1000);
 			if (hdmi->edid_cfg.hdmi_3d_format[j].struct_3d == 3)
-				mxc_fb_add_videomode(mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_SBS_FULL);
+				mxc_fb_add_videomode(hdmi, mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_SBS_FULL, 1000);
 			if (hdmi->edid_cfg.hdmi_3d_format[j].struct_3d == 6)
-				mxc_fb_add_videomode(mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_TOP_BOTTOM);
+				mxc_fb_add_videomode(hdmi, mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_TOP_BOTTOM, 1000);
 			if (hdmi->edid_cfg.hdmi_3d_format[j].struct_3d == 8)
-				mxc_fb_add_videomode(mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_SBS_HALF);
+				mxc_fb_add_videomode(hdmi, mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_SBS_HALF, 1000);
 		}
 	}
 
