@@ -83,8 +83,6 @@
 #define YCBCR422_8BITS		3
 #define XVYCC444            4
 
-#define fb_mode_is_equal(a, b)	mxc_edid_fb_mode_is_equal(true, a, b, ~0)
-
 /*
  * We follow a flowchart which is in the "Synopsys DesignWare Courses
  * HDMI Transmitter Controller User Guide, 1.30a", section 3.1
@@ -2262,7 +2260,7 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 	}
 
 	/* If video mode same as previous, init HDMI again */
-	if (fb_mode_is_equal(&m, mode) && hdmi->edid_status == HDMI_EDID_SAME) {
+	if (mxc_edid_fb_mode_is_equal(true, &m, mode, ~0) && hdmi->edid_status == HDMI_EDID_SAME) {
 		dev_dbg(&hdmi->pdev->dev,
 				"%s: Video mode and EDID same as previous\n", __func__);
 		/* update fbi mode in case modelist is updated */
@@ -2271,7 +2269,7 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi)
 		       sizeof(struct fb_var_screeninfo));
 		/* update hdmi setting in case EDID data updated  */
 		mxc_hdmi_setup(hdmi, 0);
-	} else if (fb_mode_is_equal(&m, mode)) {
+	} else if (mxc_edid_fb_mode_is_equal(true, &m, mode, ~0)) {
 		dev_dbg(&hdmi->pdev->dev,
 				"%s: Video mode same as previous\n", __func__);
 		/* update fbi mode in case modelist is updated */
@@ -2987,17 +2985,18 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 
 	/* Find a nearest mode in default modelist */
 	fb_var_to_videomode(&m, &hdmi->fbi->var);
-	dump_fb_videomode(&m);
 	hdmi->dft_mode_set = false;
 	/* Save default video mode */
 	memcpy(&hdmi->default_mode, &m, sizeof(struct fb_videomode));
 
-	mode = mxc_fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
+	hdmi->default_mode.vmode |= FB_VMODE_NONINTERLACED;
+	mode = fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
 	if (!mode) {
 		pr_err("%s: could not find mode in modelist\n", __func__);
 		return -1;
 	}
 
+	dump_fb_videomode((struct fb_videomode *)mode);
 	fb_videomode_to_var(&hdmi->fbi->var, mode);
 
 	/* update fbi mode */
