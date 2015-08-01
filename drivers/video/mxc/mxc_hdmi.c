@@ -2989,13 +2989,11 @@ static int mxc_hdmi_disp_init(struct mxc_dispdrv_handle *disp,
 	/* Save default video mode */
 	memcpy(&hdmi->default_mode, &m, sizeof(struct fb_videomode));
 
-	hdmi->default_mode.vmode |= FB_VMODE_NONINTERLACED;
 	mode = fb_find_nearest_mode(&m, &hdmi->fbi->modelist);
-	if (!mode) {
+	if (!mode)
 		pr_err("%s: could not find mode in modelist\n", __func__);
-		return -1;
-	}
 
+	hdmi->default_mode.vmode |= mode->vmode;
 	dump_fb_videomode((struct fb_videomode *)mode);
 	fb_videomode_to_var(&hdmi->fbi->var, mode);
 
