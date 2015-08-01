@@ -2053,6 +2053,27 @@ static void mxc_hdmi_notify_fb(struct mxc_hdmi *hdmi)
 	dev_dbg(&hdmi->pdev->dev, "%s exit\n", __func__);
 }
 
+static void mxc_hdmi_log_modelist(struct mxc_hdmi *hdmi, struct fb_videomode *mode)
+{
+	char refresh[10];
+
+	get_refresh_str(mode, refresh);
+	dev_info(&hdmi->pdev->dev,
+		"vic: %d, xres = %d, yres = %d, ratio = %s, freq = %s, vmode = %d, flag = %d, pclk = %d\n",
+		mxc_edid_mode_to_vic(mode, 0),
+		mode->xres,
+		mode->yres,
+		mode->vmode & FB_VMODE_ASPECT_1 ? "1" :
+		    mode->vmode & FB_VMODE_ASPECT_4_3 ? "4/3" :
+		    mode->vmode & FB_VMODE_ASPECT_5_4 ? "5/4" :
+		    mode->vmode & FB_VMODE_ASPECT_16_10 ? "16/10" :
+		    mode->vmode & FB_VMODE_ASPECT_16_9 ? "16/9" : "n/a",
+		refresh,
+		mode->vmode,
+		mode->flag,
+	mode->pixclock);
+}
+
 inline
 static void mxc_fb_add_videomode(const struct fb_videomode *src_mode, struct list_head *modelist, const u32 new_flag, const u32 mod_vmode)
 {
@@ -2061,6 +2082,7 @@ static void mxc_fb_add_videomode(const struct fb_videomode *src_mode, struct lis
 	memcpy(&mode, src_mode, sizeof(struct fb_videomode));
 	mode.flag = new_flag; mode.vmode |= mod_vmode;
 	fb_add_videomode(&mode, modelist);
+	mxc_hdmi_log_modelist(hdmi, &mode);
 }
 
 enum {
@@ -2177,23 +2199,6 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 				break;
 			}
 
-			get_refresh_str(tm, refresh);
-			dev_info(&hdmi->pdev->dev, "Added mode: %d, vic: %d %s", i, vic, j == 1 ? " fractional" : "");
-			dev_info(&hdmi->pdev->dev,
-				"xres = %d, yres = %d, ratio = %s, freq = %s, vmode = %d, flag = %d, pclk = %d\n",
-				tm->xres,
-				tm->yres,
-				tm->vmode & FB_VMODE_ASPECT_1 ? "1" :
-				    mode->vmode & FB_VMODE_ASPECT_4_3 ? "4/3" :
-				    mode->vmode & FB_VMODE_ASPECT_5_4 ? "5/4" :
-				    mode->vmode & FB_VMODE_ASPECT_16_10 ? "16/10" :
-				    mode->vmode & FB_VMODE_ASPECT_16_9 ? "16/9" : "n/a",
-				refresh,
-				tm->vmode,
-				tm->flag,
-				tm->pixclock);
-			fb_add_videomode(tm, &hdmi->fbi->modelist);
-		}
 
 		if (!hdmi->hdmi_data.enable_3d || !vic)
 			continue;
