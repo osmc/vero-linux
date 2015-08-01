@@ -2096,6 +2096,24 @@ static struct stereo_mandatory_mode stereo_mandatory_modes[] = {
 	{ 50, &mxc_cea_mode[20], FB_MODE_IS_3D, FB_VMODE_3D_SBS_HALF   }
 };
 
+static int mxc_hdmi_check_mini(const struct fb_videomode *check, struct list_head *head)
+{
+	struct fb_modelist *modelist;
+	struct fb_videomode *m;
+
+	list_for_each_entry(modelist, head, list) {
+		m = &modelist->mode;
+		if (m->xres == check->xres &&
+		    m->yres == check->yres &&
+		    m->refresh == check->refresh &&
+		    !((m->vmode ^ check->vmode) & FB_VMODE_MASK_SIMPLE) &&
+		    mxc_edid_mode_to_vic(m, 0) != 0)
+			return 1;
+	}
+
+	return 0;
+}
+
 static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 {
 	int i, j, k, nvic = 0, vic;
@@ -2108,23 +2126,25 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 	fb_destroy_modelist(&hdmi->fbi->modelist);
 	fb_add_videomode(&vga_mode, &hdmi->fbi->modelist);
 
-	for (i = 0; i < hdmi->fbi->monspecs.modedb_len; i++) {
+	for (i = hdmi->fbi->monspecs.modedb_len; i > 0; i--) {
 		/*
 		 * We might check here if mode is supported by HDMI.
 		 * We do not currently support interlaced modes.
 		 * And add CEA modes in the modelist.
 		 */
-		mode = &hdmi->fbi->monspecs.modedb[i];
+		mode = &hdmi->fbi->monspecs.modedb[i-1];
 
 		if ((vic = mxc_edid_mode_to_vic(mode, 0)))
 			nvic++;
 
 		// allow detailed timing specification with vic=0 for HDMI
 		// mode
-		if (hdmi->edid_cfg.hdmi_cap &&
+		if ((hdmi->edid_cfg.hdmi_cap &&
 		   (((mode->flag != FB_MODE_IS_DETAILED) && (vic == 0))
 				||
 		   (mode->flag == FB_MODE_IS_VESA)))
+				||
+		   (vic == 0 && mxc_hdmi_check_mini(mode, &hdmi->fbi->modelist)))
 				continue;
 
 		if (!mode->xres || !mode->refresh)
