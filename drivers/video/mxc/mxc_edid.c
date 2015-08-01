@@ -795,13 +795,6 @@ const struct fb_videomode *mxc_fb_find_nearest_mode(const struct fb_videomode *m
 		modelist = list_entry(pos, struct fb_modelist, list);
 		cmode = &modelist->mode;
 
-		if (!(mode->vmode & FB_VMODE_3D_MASK) &&
-		     (cmode->vmode & FB_VMODE_3D_MASK))
-			continue;
-		if ((mode->vmode & FB_VMODE_3D_MASK) &&
-		   ((mode->vmode & FB_VMODE_3D_MASK) != (cmode->vmode & FB_VMODE_3D_MASK)))
-			continue;
-
 		if ((mode->vmode & FB_VMODE_MASK_SIMPLE) != (cmode->vmode & FB_VMODE_MASK_SIMPLE))
 			continue;
 
