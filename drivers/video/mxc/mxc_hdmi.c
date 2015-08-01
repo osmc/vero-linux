@@ -2075,11 +2075,12 @@ static void mxc_hdmi_log_modelist(struct mxc_hdmi *hdmi, struct fb_videomode *mo
 }
 
 inline
-static void mxc_fb_add_videomode(const struct fb_videomode *src_mode, struct list_head *modelist, const u32 new_flag, const u32 mod_vmode)
+static void mxc_fb_add_videomode(struct mxc_hdmi *hdmi, const struct fb_videomode *src_mode, struct list_head *modelist, const u32 new_flag, const u32 mod_vmode, int frac)
 {
 	struct fb_videomode mode;
 
 	memcpy(&mode, src_mode, sizeof(struct fb_videomode));
+	mode.pixclock = mode.pixclock * frac / 1000;
 	mode.flag = new_flag; mode.vmode |= mod_vmode;
 	fb_add_videomode(&mode, modelist);
 	mxc_hdmi_log_modelist(hdmi, &mode);
@@ -2179,26 +2180,11 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 				mode->vmode |= FB_VMODE_ASPECT_16_9;
 		}
 
-		for (j = 0; j < 1 || (hdmi->hdmi_data.enable_fract && j < 2); j++) {
-			struct fb_videomode *tm = mode;
-			struct fb_videomode mode2;
-			char refresh[10];
+		fb_add_videomode(mode, &hdmi->fbi->modelist);
+		mxc_hdmi_log_modelist(hdmi, mode);
 
-			if (j == 1 && (mode->refresh != 24 && mode->refresh != 30 && mode->refresh != 60))
-				break;
-
-			switch (j) {
-			case 1:
-				memcpy(&mode2, mode, sizeof(struct fb_videomode));
-				mode2.vmode = mode->vmode | FB_VMODE_FRACTIONAL;
-				mode2.pixclock = mode2.pixclock * 1001 / 1000;
-				fb_add_videomode(&mode2, &hdmi->fbi->modelist);
-				tm = &mode2;
-				break;
-			default:
-				break;
-			}
-
+		if (hdmi->hdmi_data.enable_fract && (mode->refresh == 24 || mode->refresh == 30 || mode->refresh == 60))
+			mxc_fb_add_videomode(hdmi, mode, &hdmi->fbi->modelist, mode->flag, FB_VMODE_FRACTIONAL, 1001);
 
 		if (!hdmi->hdmi_data.enable_3d || !vic)
 			continue;
