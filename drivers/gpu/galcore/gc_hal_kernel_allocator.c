@@ -367,19 +367,6 @@ _DefaultAlloc(
         {
             flush_dcache_page(page);
 
-#if !gcdCACHE_FUNCTION_UNIMPLEMENTED && defined(CONFIG_OUTER_CACHE) && gcdENABLE_OUTER_CACHE_PATCH
-            if (page_to_phys(page))
-            {
-                _HandleOuterCache(
-                    Allocator->os,
-                    page_to_phys(page),
-                    gcvNULL,
-                    PAGE_SIZE,
-                    gcvCACHE_FLUSH
-                    );
-            }
-#endif
-
             priv->high += PAGE_SIZE;
         }
     }
