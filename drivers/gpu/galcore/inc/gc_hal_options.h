@@ -715,15 +715,6 @@
 #endif
 
 /*
-    gcdENABLE_OUTER_CACHE_PATCH
-
-        Enable the outer cache patch.
-*/
-#ifndef gcdENABLE_OUTER_CACHE_PATCH
-#   define gcdENABLE_OUTER_CACHE_PATCH          0
-#endif
-
-/*
     gcdPROCESS_ADDRESS_SPACE
 
         When non-zero, every process which attaches to galcore has its own GPU
