@@ -500,7 +500,7 @@ static int mxcfb_set_par(struct fb_info *fbi)
 
 	mxcfb_set_fix(fbi);
 
-	mem_len = fbi->var.yres_virtual * fbi->fix.line_length;
+	mem_len = ALIGN(fbi->var.yres_virtual, 16) * fbi->fix.line_length;
 	if (!fbi->fix.smem_start || (mem_len > fbi->fix.smem_len)) {
 		if (fbi->fix.smem_start)
 			mxcfb_unmap_video_memory(fbi);
@@ -1745,8 +1745,8 @@ static int mxcfb_resume(struct platform_device *pdev)
  */
 static int mxcfb_map_video_memory(struct fb_info *fbi)
 {
-	if (fbi->fix.smem_len < fbi->var.yres_virtual * fbi->fix.line_length)
-		fbi->fix.smem_len = fbi->var.yres_virtual *
+	if (fbi->fix.smem_len < ALIGN(fbi->var.yres_virtual, 16) * fbi->fix.line_length)
+		fbi->fix.smem_len = ALIGN(fbi->var.yres_virtual, 16) *
 				    fbi->fix.line_length;
 
 	fbi->screen_base = dma_alloc_writecombine(fbi->device,
