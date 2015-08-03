@@ -2165,7 +2165,7 @@ gckVIDMEM_HANDLE_Reference(
     gctINT32 oldValue             = 0;
     gctBOOL acquired              = gcvFALSE;
 
-    gcmkHEADER_ARG("Handle=%d PrcoessID=%d", Handle, ProcessID);
+    gcmkHEADER_ARG("Handle=%d ProcessID=%d", Handle, ProcessID);
 
     gcmkONERROR(
         gckKERNEL_FindHandleDatbase(Kernel, ProcessID, &database, &mutex));
@@ -2210,7 +2210,7 @@ gckVIDMEM_HANDLE_Dereference(
     gckVIDMEM_HANDLE handleObject = gcvNULL;
     gctBOOL acquired              = gcvFALSE;
 
-    gcmkHEADER_ARG("Handle=%d PrcoessID=%d", Handle, ProcessID);
+    gcmkHEADER_ARG("Handle=%d ProcessID=%d", Handle, ProcessID);
 
     gcmkONERROR(
         gckKERNEL_FindHandleDatbase(Kernel,
@@ -2296,7 +2296,7 @@ gckVIDMEM_HANDLE_LookupAndReference(
     /* Return result. */
     *Node = node;
 
-    gcmkFOOTER_ARG("*Node=%d", *Node);
+    gcmkFOOTER_ARG("*Node=%X", *Node);
     return gcvSTATUS_OK;
 
 OnError:
@@ -2343,7 +2343,7 @@ gckVIDMEM_HANDLE_Lookup(
 
     *Node = node;
 
-    gcmkFOOTER_ARG("*Node=%d", *Node);
+    gcmkFOOTER_ARG("*Node=%X", *Node);
     return gcvSTATUS_OK;
 
 OnError:
