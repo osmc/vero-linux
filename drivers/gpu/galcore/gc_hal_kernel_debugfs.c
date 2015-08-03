@@ -138,7 +138,6 @@ struct _gcsDEBUGFS_Node
 /*Synchronization primitives*/
 #define gcmkNODE_READQ(node) (&((node)->read_q))
 #define gcmkNODE_WRITEQ(node) (&((node)->write_q))
-#define gcmkNODE_SEM(node) (&((node)->sem))
 
 /*Utilities*/
 #define gcmkMIN(x, y) ((x) < (y) ? (x) : y)
@@ -440,7 +439,7 @@ _AppendString (
     n = gcmkMIN ( Length , Node->size - 1 ) ;
 
     /* make sure we have the memory for it */
-    if ( ( message = kmalloc ( n , GFP_KERNEL ) ) == NULL )
+    if ( ( message = kmalloc ( n , GFP_ATOMIC ) ) == NULL )
         return - ENOMEM ;
 
     /* copy into our temp buffer */
@@ -475,12 +474,6 @@ _DebugFSPrint (
         return - ERESTARTSYS ;
     }
 
-/*
-    if(down_interruptible( gcmkNODE_SEM ( gc_dbgfs.currentNode ) ) )
-    {
-         return - ERESTARTSYS ;
-    }
-*/
     len = vsnprintf ( buffer , sizeof (buffer ) , Message , *( va_list * ) Arguments ) ;
     buffer[len] = '\0' ;
 
@@ -491,10 +484,7 @@ _DebugFSPrint (
         buffer[len] = '\0' ;
     }
     res = _AppendString ( gc_dbgfs.currentNode , buffer , len ) ;
-    up ( gcmkNODE_SEM ( gc_dbgfs.currentNode ) ) ;
-#if 0
-    wake_up_interruptible ( gcmkNODE_READQ ( gc_dbgfs.currentNode ) ) ; /* blocked in read*/
-#endif
+    wake_up ( gcmkNODE_READQ ( gc_dbgfs.currentNode ) ) ; /* blocked in read*/
     return res;
 }
 
@@ -550,15 +540,9 @@ _DebugFSRead (
         return - EIO ;
     }
 
-    if ( down_interruptible ( gcmkNODE_SEM ( node ) ) )
-    {
-        return - ERESTARTSYS ;
-    }
-
     /* wait until there's data available (unless we do nonblocking reads) */
     while ( *offset >= gcmkNODE_FIRST_EMPTY_BYTE ( node ) )
     {
-        up ( gcmkNODE_SEM ( node ) ) ;
         if ( file->f_flags & O_NONBLOCK )
         {
             return - EAGAIN ;
@@ -566,11 +550,6 @@ _DebugFSRead (
         if ( wait_event_interruptible ( ( *( gcmkNODE_READQ ( node ) ) ) , ( *offset < gcmkNODE_FIRST_EMPTY_BYTE ( node ) ) ) )
         {
             return - ERESTARTSYS ; /* signal: tell the fs layer to handle it */
-        }
-        /* otherwise loop, but first reacquire the lock */
-        if ( down_interruptible ( gcmkNODE_SEM ( node ) ) )
-        {
-            return - ERESTARTSYS ;
         }
     }
     data_to_return = _ReadFromNode ( node , &length , offset ) ;
@@ -589,7 +568,6 @@ _DebugFSRead (
     }
     kfree ( data_to_return ) ;
 unlock:
-    up ( gcmkNODE_SEM ( node ) ) ;
     wake_up_interruptible ( gcmkNODE_WRITEQ ( node ) ) ;
     return retval ;
 }
@@ -617,11 +595,6 @@ _DebugFSWrite (
         return - EIO ;
     }
 
-    if ( down_interruptible ( gcmkNODE_SEM ( node ) ) )
-    {
-        return - ERESTARTSYS ;
-    }
-
     /* if the message is longer than the buffer, just take the beginning
      * of it, in hopes that the reader (if any) will have time to read
      * before we wrap around and obliterate it */
@@ -630,7 +603,6 @@ _DebugFSWrite (
     /* make sure we have the memory for it */
     if ( ( message = kmalloc ( n , GFP_KERNEL ) ) == NULL )
     {
-        up ( gcmkNODE_SEM ( node ) ) ;
         return - ENOMEM ;
     }
 
@@ -638,7 +610,6 @@ _DebugFSWrite (
     /* copy into our temp buffer */
     if ( copy_from_user ( message , buffer , n ) > 0 )
     {
-        up ( gcmkNODE_SEM ( node ) ) ;
         kfree ( message ) ;
         return - EFAULT ;
     }
@@ -647,7 +618,6 @@ _DebugFSWrite (
     _WriteToNode ( node , message , n ) ;
 
     kfree ( message ) ;
-    up ( gcmkNODE_SEM ( node ) ) ;
 
     /* wake up any readers that might be waiting for the data.  we call
      * schedule in the vague hope that a reader will run before the
@@ -1020,7 +990,6 @@ gckDEBUGFS_CreateNode (
 #else
     init_waitqueue ( gcmkNODE_WRITEQ ( node ) ) ;
 #endif
-    sema_init ( gcmkNODE_SEM ( node ) , 1 ) ;
     /*End the sync primitives*/
 
     /*creating the debug file system*/
@@ -1081,7 +1050,6 @@ gckDEBUGFS_FreeNode (
         return ;
     }
 
-    down ( gcmkNODE_SEM ( Node ) ) ;
     /*free data*/
     vfree ( Node->data ) ;
 
@@ -1109,7 +1077,6 @@ gckDEBUGFS_FreeNode (
             ptr = & ( ( **ptr ).next ) ;
     }
     *ptr = Node->next ;
-    up ( gcmkNODE_SEM ( Node ) ) ;
 }
 
 /*******************************************************************************
