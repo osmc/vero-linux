@@ -790,7 +790,6 @@ _IsGPUPresent(
     )
 {
     gceSTATUS status;
-    gcsHAL_QUERY_CHIP_IDENTITY identity;
     gctUINT32 control;
 
     gcmkHEADER_ARG("Hardware=0x%x", Hardware);
@@ -810,24 +809,6 @@ _IsGPUPresent(
                                       Hardware->core,
                                       0x00000,
                                       control));
-
-    /* Identify the hardware. */
-    gcmkONERROR(_IdentifyHardware(Hardware->os,
-                                  Hardware->core,
-                                  &identity));
-
-    /* Check if these are the same values as saved before. */
-    if ((Hardware->identity.chipModel          != identity.chipModel)
-    ||  (Hardware->identity.chipRevision       != identity.chipRevision)
-    ||  (Hardware->identity.chipFeatures       != identity.chipFeatures)
-    ||  (Hardware->identity.chipMinorFeatures  != identity.chipMinorFeatures)
-    ||  (Hardware->identity.chipMinorFeatures1 != identity.chipMinorFeatures1)
-    ||  (Hardware->identity.chipMinorFeatures2 != identity.chipMinorFeatures2)
-    )
-    {
-        gcmkPRINT("[galcore]: GPU is not present.");
-        gcmkONERROR(gcvSTATUS_GPU_NOT_RESPONDING);
-    }
 
     /* Success. */
     gcmkFOOTER_NO();
