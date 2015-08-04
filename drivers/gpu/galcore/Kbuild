@@ -232,7 +232,7 @@ ifeq ($(VIVANTE_ENABLE_VG), 1)
 EXTRA_CFLAGS += -I$(AQROOT)/archvg
 endif
 
-obj-$(CONFIG_VIVANTE_GALCORE) += galcore.o
+obj-$(CONFIG_MXC_GPU_VIV_V5) += galcore.o
 
 galcore-objs  := $(OBJS)
 
