@@ -1,8 +1,14 @@
-menu "MXC Vivante GPU support"
+menu "Vivante GPU support"
 	depends on SOC_IMX6Q
 
 config MXC_GPU_VIV
-	tristate "MXC Vivante GPU support"
+	tristate "MXC Vivante GPU support v4 drivers (v5 drivers available if deselected)"
+	---help---
+         Say Y to get the GPU driver support.
+
+config MXC_GPU_VIV_V5
+	tristate "Vivante GPU support v5 drivers"
+	depends on MXC_GPU_VIV=n
 	---help---
          Say Y to get the GPU driver support.
 
