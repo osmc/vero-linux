@@ -34,12 +34,10 @@
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
 
-#ifdef CONFIG_MXC_BUSFREQ
 #include <linux/busfreq-imx6.h>
-#endif
 
 
-#ifdef CONFIG_DEVICE_THERMAL
+#ifdef CONFIG_IMX_THERMAL
 #include <linux/device_cooling.h>
 #define REG_THERMAL_NOTIFIER(a) register_devfreq_cooling_notifier(a);
 #define UNREG_THERMAL_NOTIFIER(a) unregister_devfreq_cooling_notifier(a);
@@ -197,7 +195,7 @@ _ShrinkMemory(
 #endif
 
 #if gcdENABLE_FSCALE_VAL_ADJUST
-#ifdef CONFIG_DEVICE_THERMAL
+#ifdef CONFIG_IMX_THERMAL
 static int thermal_hot_pm_notify(struct notifier_block *nb, unsigned long event,
        void *dummy)
 {
@@ -620,17 +618,13 @@ _SetClock(
 #ifdef CONFIG_PM
 static int gpu_runtime_suspend(struct device *dev)
 {
-#ifdef CONFIG_MXC_BUSFREQ
     release_bus_freq(BUS_FREQ_HIGH);
-#endif
     return 0;
 }
 
 static int gpu_runtime_resume(struct device *dev)
 {
-#ifdef CONFIG_MXC_BUSFREQ
     request_bus_freq(BUS_FREQ_HIGH);
-#endif
     return 0;
 }
 
