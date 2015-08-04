@@ -32,6 +32,8 @@ obj-y += busfreq-imx6.o
 ifdef CONFIG_ARM_IMX6Q_CPUFREQ
 obj-$(CONFIG_SOC_IMX6Q) += ddr3_freq_imx6.o busfreq_ddr3.o
 obj-$(CONFIG_SOC_IMX6SL) += lpddr2_freq_imx6.o busfreq_lpddr2.o
+AFLAGS_ddr3_freq_imx6.o :=-Wa,-march=armv7-a
+AFLAGS_lpddr2_freq_imx6.o :=-Wa,-march=armv7-a
 endif
 
 ifeq ($(CONFIG_CPU_IDLE),y)
