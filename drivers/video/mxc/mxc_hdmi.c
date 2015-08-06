@@ -230,6 +230,10 @@ static char *rgb_quant_range = "auto";
 module_param(rgb_quant_range, charp, S_IRUGO);
 MODULE_PARM_DESC(rgb_quant_range, "RGB Quant Range (auto, default, limited, full)");
 
+static bool ignore_edid = 0;
+module_param(ignore_edid, bool, S_IRUGO);
+MODULE_PARM_DESC(ignore_edid, "Ignore EDID (default=0)");
+
 static char *enable_3d = "1";
 module_param(enable_3d, charp, S_IRUGO);
 MODULE_PARM_DESC(enable_3d, "3D modes enabled (0/1)");
@@ -2343,11 +2347,15 @@ static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 	hdmi->hp_state = HDMI_HOTPLUG_CONNECTED_NO_EDID;
 
 	/* HDMI Initialization Step C */
-	edid_status = mxc_hdmi_read_edid(hdmi);
+
+	if (ignore_edid)
+		edid_status = HDMI_EDID_FAIL;
+	else
+		edid_status = mxc_hdmi_read_edid(hdmi);
 
 	/* Read EDID again if first EDID read failed */
-	if (edid_status == HDMI_EDID_NO_MODES ||
-			edid_status == HDMI_EDID_FAIL) {
+	if (!ignore_edid && (edid_status == HDMI_EDID_NO_MODES ||
+			edid_status == HDMI_EDID_FAIL)) {
 		int retry_status;
 		dev_info(&hdmi->pdev->dev, "Read EDID again\n");
 		msleep(200);
