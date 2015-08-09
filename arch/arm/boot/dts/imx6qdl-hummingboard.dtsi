@@ -113,6 +113,7 @@
 		mux-int-port = <1>;
 		cpu-dai = <&ssi1>;
 		ssi-controller = <&ssi1>;
+		status = "disabled";
 	};
 
 	sound-spdif {
@@ -234,6 +235,7 @@
 		pinctrl-0 = <&pinctrl_hummingboard_sgtl5000>;
 		VDDA-supply = <&reg_3p3v>;
 		VDDIO-supply = <&reg_3p3v>;
+		status = "disabled";
 	};
 };
 
