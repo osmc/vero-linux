@@ -44,7 +44,9 @@
 #include <media/v4l2-ioctl.h>
 #include <media/v4l2-int-device.h>
 #include <linux/fsl_devices.h>
+#include <uapi/linux/mxc_v4l2.h>
 #include "mxc_v4l2_capture.h"
+#include "../v4l2-extra.h"
 #include "ipu_prp_sw.h"
 
 #define init_MUTEX(sem)         sema_init(sem, 1)
@@ -2672,7 +2674,7 @@ static struct v4l2_file_operations mxc_v4l_fops = {
 	.open = mxc_v4l_open,
 	.release = mxc_v4l_close,
 	.read = mxc_v4l_read,
-	.ioctl = mxc_v4l_ioctl,
+//	.ioctl = mxc_v4l_ioctl,
 	.mmap = mxc_mmap,
 	.poll = mxc_poll,
 };
