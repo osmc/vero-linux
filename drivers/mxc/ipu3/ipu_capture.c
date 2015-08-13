@@ -167,6 +167,18 @@ ipu_csi_init_interface(struct ipu_soc *ipu, uint16_t width, uint16_t height,
 			 */
 			ipu_csi_write(ipu, csi, 0x40596, CSI_CCIR_CODE_2);
 			ipu_csi_write(ipu, csi, 0xFF0000, CSI_CCIR_CODE_3);
+		} else if (width == 720 && height <= 625) {
+			/* PAL case */
+			/*
+			 * Field0BlankEnd = 0x6, Field0BlankStart = 0x2,
+			 * Field0ActiveEnd = 0x4, Field0ActiveStart = 0
+			 */
+			ipu_csi_write(ipu, csi, 0x40596, CSI_CCIR_CODE_1);
+			/*
+			 * Field1BlankEnd = 0x7, Field1BlankStart = 0x3,
+			 * Field1ActiveEnd = 0x5, Field1ActiveStart = 0x1
+			 */
+			ipu_csi_write(ipu, csi, 0xD07DF, CSI_CCIR_CODE_2);
 		} else {
 			dev_err(ipu->dev, "Unsupported CCIR656 interlaced "
 					"video mode\n");
@@ -326,6 +338,40 @@ void ipu_csi_set_window_pos(struct ipu_soc *ipu, uint32_t left, uint32_t top, ui
 	_ipu_put(ipu);
 }
 EXPORT_SYMBOL(ipu_csi_set_window_pos);
+
+void ipu_csi_window_size_crop(struct ipu_soc *ipu, uint32_t swidth, uint32_t sheight,
+		uint32_t width, uint32_t height, uint32_t left, uint32_t top, uint32_t csi)
+{
+	uint32_t temp;
+
+	if ((left >= (1 << 13)) || (top >= (1 << 12))) {
+		pr_err("%s: Error left=%x top=%x\n", __func__, left, top);
+		left = 0;
+		top = 0;
+		swidth = width;
+		sheight = height;
+	}
+	_ipu_get(ipu);
+
+	/*
+	 * sheight >= top + height
+	 * swidth >= left + width,  unless interlaced
+	 * left = # of lines/field if interlaced
+	 */
+	mutex_lock(&ipu->mutex_lock);
+	ipu_csi_write(ipu, csi, (swidth - 1) | (sheight - 1) << 16, CSI_SENS_FRM_SIZE);
+	ipu_csi_write(ipu, csi, (width - 1) | (height - 1) << 16, CSI_ACT_FRM_SIZE);
+
+	temp = ipu_csi_read(ipu, csi, CSI_OUT_FRM_CTRL);
+	temp &= ~(CSI_HSC_MASK | CSI_VSC_MASK);
+	temp |= ((top << CSI_VSC_SHIFT) | (left << CSI_HSC_SHIFT));
+	ipu_csi_write(ipu, csi, temp, CSI_OUT_FRM_CTRL);
+
+	mutex_unlock(&ipu->mutex_lock);
+
+	_ipu_put(ipu);
+}
+EXPORT_SYMBOL(ipu_csi_window_size_crop);
 
 /*!
  * _ipu_csi_horizontal_downsize_enable
