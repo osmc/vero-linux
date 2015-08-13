@@ -147,6 +147,7 @@ enum v4l2_buf_type {
 	V4L2_BUF_TYPE_SDR_CAPTURE          = 11,
 	/* Deprecated, do not use */
 	V4L2_BUF_TYPE_PRIVATE              = 0x80,
+	V4L2_BUF_TYPE_SENSOR               = 0x100,
 };
 
 #define V4L2_TYPE_IS_MULTIPLANAR(type)			\
@@ -370,6 +371,13 @@ struct v4l2_pix_format {
 	__u32			flags;		/* format flags (V4L2_PIX_FMT_FLAG_*) */
 	__u32			ycbcr_enc;	/* enum v4l2_ycbcr_encoding */
 	__u32			quantization;	/* enum v4l2_quantization */
+};
+
+struct v4l2_sensor_dimension {
+	__u32	swidth;
+	__u32	sheight;
+	__u32	top;
+	__u32	left;
 };
 
 /*      Pixel format         FOURCC                          depth  Description  */
@@ -1389,6 +1397,13 @@ struct v4l2_ext_controls {
 	struct v4l2_ext_control *controls;
 };
 
+struct v4l2_send_command_control {
+	__u32		     id;
+	__u32		     value0;
+	__u32		     value1;
+	char	     	 debug[256];
+};
+
 #define V4L2_CTRL_ID_MASK      	  (0x0fffffff)
 #define V4L2_CTRL_ID2CLASS(id)    ((id) & 0x0fff0000UL)
 #define V4L2_CTRL_DRIVER_PRIV(id) (((id) & 0xffff) >= 0x1000)
@@ -1906,6 +1921,7 @@ struct v4l2_format {
 	__u32	 type;
 	union {
 		struct v4l2_pix_format		pix;     /* V4L2_BUF_TYPE_VIDEO_CAPTURE */
+		struct v4l2_sensor_dimension	spix;	 /* V4L2_BUF_TYPE_SENSOR */
 		struct v4l2_pix_format_mplane	pix_mp;  /* V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE */
 		struct v4l2_window		win;     /* V4L2_BUF_TYPE_VIDEO_OVERLAY */
 		struct v4l2_vbi_format		vbi;     /* V4L2_BUF_TYPE_VBI_CAPTURE */

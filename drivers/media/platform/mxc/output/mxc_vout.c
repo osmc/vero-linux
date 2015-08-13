@@ -2150,7 +2150,7 @@ static int mxc_vout_setup_output(struct mxc_vout_dev *dev)
 		}
 
 		*vout->vfd = mxc_vout_template;
-		vout->vfd->debug = debug;
+		vout->vfd->dev_debug = debug;
 		vout->vfd->v4l2_dev = &dev->v4l2_dev;
 		vout->vfd->lock = &vout->mutex;
 		vout->vfd->vfl_dir = VFL_DIR_TX;
