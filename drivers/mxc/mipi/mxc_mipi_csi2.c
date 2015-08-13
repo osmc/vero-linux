@@ -38,6 +38,7 @@
 #include "mxc_mipi_csi2.h"
 
 static struct mipi_csi2_info *gmipi_csi2;
+static u8 dphy_clk;
 
 void _mipi_csi2_lock(struct mipi_csi2_info *info)
 {
@@ -141,16 +142,16 @@ EXPORT_SYMBOL(mipi_csi2_get_status);
  * @param	info		mipi csi2 hander
  * @return      Returns setted value
  */
-unsigned int mipi_csi2_set_lanes(struct mipi_csi2_info *info)
+int mipi_csi2_set_lanes(struct mipi_csi2_info *info, unsigned lanes)
 {
-	unsigned int lanes;
+	if (--lanes > 3)
+		return -EINVAL;
 
 	_mipi_csi2_lock(info);
-	mipi_csi2_write(info, info->lanes - 1, MIPI_CSI2_N_LANES);
+	mipi_csi2_write(info, lanes, MIPI_CSI2_N_LANES);
 	lanes = mipi_csi2_read(info, MIPI_CSI2_N_LANES);
 	_mipi_csi2_unlock(info);
-
-	return lanes;
+	return ++lanes;
 }
 EXPORT_SYMBOL(mipi_csi2_set_lanes);
 
@@ -278,6 +279,8 @@ EXPORT_SYMBOL(mipi_csi2_pixelclk_disable);
  */
 int mipi_csi2_reset(struct mipi_csi2_info *info)
 {
+	u32 tst_ctrl1 = (u32)0x0 | (u32)dphy_clk << 0;
+
 	_mipi_csi2_lock(info);
 
 	mipi_csi2_write(info, 0x0, MIPI_CSI2_PHY_SHUTDOWNZ);
@@ -290,7 +293,7 @@ int mipi_csi2_reset(struct mipi_csi2_info *info)
 	mipi_csi2_write(info, 0x00000002, MIPI_CSI2_PHY_TST_CTRL0);
 	mipi_csi2_write(info, 0x00010044, MIPI_CSI2_PHY_TST_CTRL1);
 	mipi_csi2_write(info, 0x00000000, MIPI_CSI2_PHY_TST_CTRL0);
-	mipi_csi2_write(info, 0x00000014, MIPI_CSI2_PHY_TST_CTRL1);
+	mipi_csi2_write(info, tst_ctrl1, MIPI_CSI2_PHY_TST_CTRL1);
 	mipi_csi2_write(info, 0x00000002, MIPI_CSI2_PHY_TST_CTRL0);
 	mipi_csi2_write(info, 0x00000000, MIPI_CSI2_PHY_TST_CTRL0);
 
@@ -315,57 +318,6 @@ struct mipi_csi2_info *mipi_csi2_get_info(void)
 }
 EXPORT_SYMBOL(mipi_csi2_get_info);
 
-/*!
- * This function is called to get mipi csi2 bind ipu num.
- *
- * @return      Returns mipi csi2 bind ipu num
- */
-int mipi_csi2_get_bind_ipu(struct mipi_csi2_info *info)
-{
-	int ipu_id;
-
-	_mipi_csi2_lock(info);
-	ipu_id = info->ipu_id;
-	_mipi_csi2_unlock(info);
-
-	return ipu_id;
-}
-EXPORT_SYMBOL(mipi_csi2_get_bind_ipu);
-
-/*!
- * This function is called to get mipi csi2 bind csi num.
- *
- * @return      Returns mipi csi2 bind csi num
- */
-unsigned int mipi_csi2_get_bind_csi(struct mipi_csi2_info *info)
-{
-	unsigned int csi_id;
-
-	_mipi_csi2_lock(info);
-	csi_id = info->csi_id;
-	_mipi_csi2_unlock(info);
-
-	return csi_id;
-}
-EXPORT_SYMBOL(mipi_csi2_get_bind_csi);
-
-/*!
- * This function is called to get mipi csi2 virtual channel.
- *
- * @return      Returns mipi csi2 virtual channel num
- */
-unsigned int mipi_csi2_get_virtual_channel(struct mipi_csi2_info *info)
-{
-	unsigned int v_channel;
-
-	_mipi_csi2_lock(info);
-	v_channel = info->v_channel;
-	_mipi_csi2_unlock(info);
-
-	return v_channel;
-}
-EXPORT_SYMBOL(mipi_csi2_get_virtual_channel);
-
 /**
  * This function is called by the driver framework to initialize the MIPI CSI2
  * device.
@@ -378,47 +330,16 @@ EXPORT_SYMBOL(mipi_csi2_get_virtual_channel);
 static int mipi_csi2_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	struct device_node *np = pdev->dev.of_node;
+	struct device_node *np = dev->of_node;
 	struct resource *res;
 	u32 mipi_csi2_dphy_ver;
 	int ret;
+	u8 clk;
 
 	gmipi_csi2 = kmalloc(sizeof(struct mipi_csi2_info), GFP_KERNEL);
 	if (!gmipi_csi2) {
 		ret = -ENOMEM;
 		goto alloc_failed;
-	}
-
-	ret = of_property_read_u32(np, "ipu_id", &(gmipi_csi2->ipu_id));
-	if (ret) {
-		dev_err(&pdev->dev, "ipu_id missing or invalid\n");
-		goto err;
-	}
-
-	ret = of_property_read_u32(np, "csi_id", &(gmipi_csi2->csi_id));
-	if (ret) {
-		dev_err(&pdev->dev, "csi_id missing or invalid\n");
-		goto err;
-	}
-
-	ret = of_property_read_u32(np, "v_channel", &(gmipi_csi2->v_channel));
-	if (ret) {
-		dev_err(&pdev->dev, "v_channel missing or invalid\n");
-		goto err;
-	}
-
-	ret = of_property_read_u32(np, "lanes", &(gmipi_csi2->lanes));
-	if (ret) {
-		dev_err(&pdev->dev, "lanes missing or invalid\n");
-		goto err;
-	}
-
-	if ((gmipi_csi2->ipu_id < 0) || (gmipi_csi2->ipu_id > 1) ||
-		(gmipi_csi2->csi_id > 1) || (gmipi_csi2->v_channel > 3) ||
-		(gmipi_csi2->lanes > 4)) {
-		dev_err(&pdev->dev, "invalid param for mipi csi2!\n");
-		ret = -EINVAL;
-		goto err;
 	}
 
 	/* initialize mutex */
@@ -463,6 +384,11 @@ static int mipi_csi2_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
+
+	dphy_clk = 0x14;
+	ret = of_property_read_u8(np, "mipi_dphy_clk", &clk);
+	if (!ret)
+		dphy_clk = clk;
 
 	/* mipi dphy clk enable for register access */
 	clk_prepare_enable(gmipi_csi2->dphy_clk);
