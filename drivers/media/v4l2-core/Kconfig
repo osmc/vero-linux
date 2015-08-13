@@ -44,6 +44,10 @@ config V4L2_MEM2MEM_DEV
         tristate
         depends on VIDEOBUF2_CORE
 
+config VIDEO_V4L2_INT_DEVICE
+	tristate
+	depends on VIDEO_V4L2
+
 # Used by drivers that need Videobuf modules
 config VIDEOBUF_GEN
 	tristate
