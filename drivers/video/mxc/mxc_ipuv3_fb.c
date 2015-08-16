@@ -253,7 +253,7 @@ static struct fb_info *found_registered_fb(ipu_channel_t ipu_ch, int ipu_id)
 
 static irqreturn_t mxcfb_irq_handler(int irq, void *dev_id);
 static irqreturn_t mxcfb_nf_irq_handler(int irq, void *dev_id);
-static int mxcfb_blank(int blank, struct fb_info *info);
+int mxcfb_blank(int blank, struct fb_info *info);
 static int mxcfb_map_video_memory(struct fb_info *fbi);
 static int mxcfb_unmap_video_memory(struct fb_info *fbi);
 
@@ -1364,7 +1364,7 @@ static int mxcfb_ioctl(struct fb_info *fbi, unsigned int cmd, unsigned long arg)
  * mxcfb_blank():
  *      Blank the display.
  */
-static int mxcfb_blank(int blank, struct fb_info *info)
+int mxcfb_blank(int blank, struct fb_info *info)
 {
 	struct mxcfb_info *mxc_fbi = (struct mxcfb_info *)info->par;
 	int ret = 0;
@@ -1398,6 +1398,7 @@ static int mxcfb_blank(int blank, struct fb_info *info)
 		mxc_fbi->cur_blank = blank;
 	return ret;
 }
+EXPORT_SYMBOL(mxcfb_blank);
 
 /*
  * Pan or Wrap the Display

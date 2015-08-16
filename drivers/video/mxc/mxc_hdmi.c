@@ -215,6 +215,8 @@ static bool hdcp_init;
 extern const struct fb_videomode mxc_cea_mode[64];
 extern void mxc_hdmi_cec_handle(u32 cec_stat);
 
+extern int mxcfb_blank(int blank, struct fb_info *info);
+
 static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event);
 static void hdmi_enable_overflow_interrupts(void);
 static void hdmi_disable_overflow_interrupts(void);
@@ -2313,6 +2315,10 @@ static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
+	console_lock();
+	fb_blank(hdmi->fbi, FB_BLANK_UNBLANK);
+	console_unlock();
+
 	hdmi->hp_state = HDMI_HOTPLUG_CONNECTED_NO_EDID;
 
 	/* HDMI Initialization Step C */
@@ -2396,6 +2402,10 @@ static void mxc_hdmi_cable_disconnected(struct mxc_hdmi *hdmi)
 	hdmi_writeb(clkdis, HDMI_MC_CLKDIS);
 
 	hdmi->hp_state = HDMI_HOTPLUG_DISCONNECTED;
+
+	console_lock();
+	fb_blank(hdmi->fbi, FB_BLANK_POWERDOWN);
+	console_unlock();
 }
 
 static void hotplug_worker(struct work_struct *work)
@@ -2672,6 +2682,8 @@ static void mxc_hdmi_fb_registered(struct mxc_hdmi *hdmi)
 
 	if (hdmi->fb_reg)
 		return;
+
+	mxcfb_blank(FB_BLANK_POWERDOWN, hdmi->fbi);
 
 	spin_lock_irqsave(&hdmi->irq_lock, flags);
 
