@@ -200,7 +200,7 @@ void _ipu_dmfc_set_burst_size(struct ipu_soc *ipu, int dma_chan, int burst_size)
 		dmfc_bs = 0xc0;
 		break;
 	default:
-		dev_err(ipu->dev, "Unsupported burst size %d\n",
+		dev_warn(ipu->dev, "Unsupported burst size %d\n",
 			burst_size);
 		return;
 	}
@@ -258,7 +258,7 @@ static void _ipu_di_sync_config(struct ipu_soc *ipu,
 
 	if ((run_count >= 0x1000) || (offset_count >= 0x1000) || (repeat_count >= 0x1000) ||
 		(cnt_up >= 0x400) || (cnt_down >= 0x400)) {
-		dev_err(ipu->dev, "DI%d counters out of range.\n", di);
+		dev_warn(ipu->dev, "DI%d counters out of range.\n", di);
 		return;
 	}
 
@@ -1012,8 +1012,8 @@ void adapt_panel_to_ipu_restricitions(struct ipu_soc *ipu, uint16_t *v_start_wid
 			*v_end_width = 2;
 			*v_sync_width = *v_sync_width - diff;
 		} else
-			dev_err(ipu->dev, "WARNING: try to adapt timming, but failed\n");
-		dev_err(ipu->dev, "WARNING: adapt panel end blank lines\n");
+			dev_warn(ipu->dev, "WARNING: try to adapt timming, but failed\n");
+		dev_info(ipu->dev, "WARNING: adapt panel end blank lines\n");
 	}
 }
 
