@@ -131,9 +131,4 @@ struct dcic_data {
 	dev_t devt;
 	unsigned int result;
 };
-
-struct dcic_private {
-	struct dcic_data *dcic;
-	u16 client_id;
-};
 #endif
