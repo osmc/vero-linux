@@ -2677,7 +2677,7 @@ static void mxc_hdmi_setup(struct mxc_hdmi *hdmi, unsigned long event)
 	mxc_hdmi_enable_video_path(hdmi);
 
 	/* not for DVI mode */
-	if (hdmi->hp_state == HDMI_HOTPLUG_CONNECTED_HDMI) {
+	if (hdmi->hp_state != HDMI_HOTPLUG_CONNECTED_DVI) {
 		dev_dbg(&hdmi->pdev->dev, "%s CEA mode\n", __func__);
 
 		/* HDMI Initialization Step E - Configure audio */
