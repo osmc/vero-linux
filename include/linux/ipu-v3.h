@@ -735,6 +735,9 @@ void ipu_csi_set_window_pos(struct ipu_soc *ipu, uint32_t left, uint32_t top, ui
 void ipu_csi_window_size_crop(struct ipu_soc *ipu, uint32_t swidth, uint32_t sheight,
 		uint32_t width, uint32_t height, uint32_t left, uint32_t top, uint32_t csi);
 
+void adapt_panel_to_ipu_restricitions(struct device *dev, uint16_t *v_start_width, uint16_t *v_sync_width,
+		uint16_t *v_end_width);
+
 uint32_t bytes_per_pixel(uint32_t fmt);
 
 bool ipu_ch_param_bad_alpha_pos(uint32_t fmt);

@@ -60,6 +60,7 @@
 #include <video/mxc_edid.h>
 #include <video/mxc_hdmi.h>
 #include "mxc_dispdrv.h"
+#include <linux/ipu-v3.h>
 
 #include <linux/mfd/mxc-hdmi-core.h>
 
@@ -2226,8 +2227,9 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 				mode->vmode |= FB_VMODE_ASPECT_16_9;
 		}
 
-		fb_add_videomode(mode, &hdmi->fbi->modelist);
 		mxc_hdmi_log_modelist(hdmi, mode);
+		adapt_panel_to_ipu_restricitions(&hdmi->pdev->dev, (uint16_t*)&mode->upper_margin, (uint16_t*)&mode->vsync_len, (uint16_t*)&mode->lower_margin);
+		fb_add_videomode(mode, &hdmi->fbi->modelist);
 
 		if (hdmi->hdmi_data.enable_fract && (mode->refresh == 24 || mode->refresh == 30 || mode->refresh == 60))
 			mxc_fb_add_videomode(hdmi, mode, &hdmi->fbi->modelist, mode->flag, FB_VMODE_FRACTIONAL, 1001);
