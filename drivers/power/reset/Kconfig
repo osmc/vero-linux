@@ -124,6 +124,14 @@ config POWER_RESET_VERSATILE
 	  Power off and restart support for ARM Versatile family of
 	  reference boards.
 
+config POWER_RESET_SNVS
+	bool "Freescale SNVS RTC power-off driver"
+	depends on ARM 
+	depends on RTC_DRV_SNVS 
+	help
+	  Power off support for Freescale SOCs that rely on the SNVS
+	  RTC to poweroff the SOC.
+
 config POWER_RESET_VEXPRESS
 	bool "ARM Versatile Express power-off and reset driver"
 	depends on ARM || ARM64

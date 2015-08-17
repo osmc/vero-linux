@@ -43,6 +43,10 @@ struct snvs_rtc_data {
 	struct clk *clk;
 };
 
+static void __iomem *snvs_base;
+
+void snvs_poweroff(void);
+
 static u32 rtc_read_lp_counter(void __iomem *ioaddr)
 {
 	u64 read1, read2;
@@ -241,6 +245,15 @@ static irqreturn_t snvs_rtc_irq_handler(int irq, void *dev_id)
 	writel(lpsr, data->ioaddr + SNVS_LPSR);
 
 	return events ? IRQ_HANDLED : IRQ_NONE;
+}
+
+void snvs_poweroff(void)
+{
+	u32 value;
+
+	value = readl(snvs_base + SNVS_LPCR);
+	/* set TOP and DP_EN bit */
+	writel(value | 0x60, snvs_base + SNVS_LPCR);
 }
 
 static int snvs_rtc_probe(struct platform_device *pdev)
