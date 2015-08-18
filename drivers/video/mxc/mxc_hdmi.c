@@ -2196,7 +2196,9 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 				mode->vmode |= FB_VMODE_ASPECT_16_9;
 		}
 
-		fb_add_videomode(mode, &hdmi->fbi->modelist);
+		if (fb_add_videomode(mode, &hdmi->fbi->modelist))
+			continue;
+
 		mxc_hdmi_log_modelist(hdmi, mode);
 
 		if (vic && hdmi->hdmi_data.enable_fract && (mode->refresh == 24 || mode->refresh == 30 || mode->refresh == 60))
