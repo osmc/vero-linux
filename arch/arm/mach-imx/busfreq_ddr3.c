@@ -192,7 +192,7 @@ int update_ddr_freq(int ddr_rate)
 	if (ddr_rate == curr_ddr_rate)
 		return 0;
 
-	printk(KERN_DEBUG "\nBus freq set to %d start...\n", ddr_rate);
+	pr_debug("Bus freq set to %d start...\n", ddr_rate);
 
 	if (low_bus_freq_mode || audio_bus_freq_mode)
 		dll_off = true;
@@ -293,7 +293,7 @@ int update_ddr_freq(int ddr_rate)
 
 	local_irq_enable();
 
-	printk(KERN_DEBUG "Bus freq set to %d done! cpu=%d\n", ddr_rate, me);
+	pr_debug("Bus freq set to %d done! cpu=%d\n", ddr_rate, me);
 
 	return 0;
 }
