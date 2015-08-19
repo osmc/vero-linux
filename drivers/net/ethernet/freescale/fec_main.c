@@ -3446,7 +3446,7 @@ fec_probe(struct platform_device *pdev)
 
 	ret = fec_enet_mii_probe(ndev);
 	if (ret)
-		goto failed_register;
+		goto failed_mii_probe;
 
 	phy_start_aneg(fep->phy_dev);
 
@@ -3460,6 +3460,8 @@ fec_probe(struct platform_device *pdev)
 	INIT_WORK(&fep->tx_timeout_work, fec_enet_timeout_work);
 	return 0;
 
+failed_mii_probe:
+	unregister_netdev(ndev);
 failed_register:
 	fec_enet_mii_remove(fep);
 failed_mii_init:
