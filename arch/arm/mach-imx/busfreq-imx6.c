@@ -131,7 +131,10 @@ static int __init busfreq_init(void)
 	if (platform_driver_register(&busfreq_driver) != 0)
 		return -ENODEV;
 
-	printk(KERN_INFO "Bus freq driver module loaded\n");
+	if (platform_driver_register(&busfreq_driver) != 0)
+		return -ENODEV;
+
+	printk(KERN_INFO "Bus freq driver module loaded\nVPU@352Mhz is not activated\n");
 	return 0;
 }
 
