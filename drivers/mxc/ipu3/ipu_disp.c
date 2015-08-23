@@ -1013,7 +1013,7 @@ void adapt_panel_to_ipu_restricitions(struct ipu_soc *ipu, uint16_t *v_start_wid
 			*v_sync_width = *v_sync_width - diff;
 		} else
 			dev_warn(ipu->dev, "WARNING: try to adapt timming, but failed\n");
-		dev_info(ipu->dev, "WARNING: adapt panel end blank lines\n");
+		dev_dbg(ipu->dev, "WARNING: adapt panel end blank lines\n");
 	}
 }
 
