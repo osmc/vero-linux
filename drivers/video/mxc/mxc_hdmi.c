@@ -83,6 +83,8 @@
 #define YCBCR422_8BITS		3
 #define XVYCC444            4
 
+#define ALIGN2(x, a)		( ALIGN(x, a) != x ? ALIGN(x, a) - a : x )
+
 /*
  * We follow a flowchart which is in the "Synopsys DesignWare Courses
  * HDMI Transmitter Controller User Guide, 1.30a", section 3.1
@@ -2195,6 +2197,9 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 			else
 				mode->vmode |= FB_VMODE_ASPECT_16_9;
 		}
+
+		mode->xres = ALIGN2(mode->xres, 8);
+		mode->yres = ALIGN2(mode->yres, 8);
 
 		if (fb_add_videomode(mode, &hdmi->fbi->modelist))
 			continue;
