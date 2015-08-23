@@ -2157,10 +2157,29 @@ static struct stereo_mandatory_mode stereo_mandatory_modes[] = {
 	{ 20, FB_VMODE_3D_SBS_HALF   }
 };
 
+static int mxc_fb_check_existing(struct fb_videomode *match, int vic, struct list_head *head)
+{
+	struct list_head *pos;
+	struct fb_modelist *modelist;
+	struct fb_videomode *mode;
+
+	list_for_each(pos, head) {
+		modelist = list_entry(pos, struct fb_modelist, list);
+		mode = &modelist->mode;
+		if (match->xres == mode->xres
+		&&  match->yres == mode->yres
+		&&  match->refresh == mode->refresh
+		&& (match->vmode & (FB_VMODE_MASK ^ FB_VMODE_ASPECT_MASK)) == (mode->vmode & (FB_VMODE_MASK ^ FB_VMODE_ASPECT_MASK)))
+			return 1;
+	}
+	return 0;
+}
+
 static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 {
-	int i, j, k, nvic = 0, vic;
+	int i, j, nvic = 0, vic, k = 0;
 	struct fb_videomode *mode;
+	uint32_t fmasks[5] = { FB_MODE_IS_FIRST, ~(FB_MODE_IS_DETAILED | FB_MODE_IS_FIRST), FB_MODE_IS_DETAILED, ~0, 0 };
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
@@ -2169,7 +2188,8 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 	fb_destroy_modelist(&hdmi->fbi->modelist);
 	fb_add_videomode(&vga_mode, &hdmi->fbi->modelist);
 
-	for (i = 0; i < hdmi->fbi->monspecs.modedb_len; i++) {
+	while (fmasks[k]) {
+	    for (i = 0; i < hdmi->fbi->monspecs.modedb_len; i++) {
 		/*
 		 * We might check here if mode is supported by HDMI.
 		 * We do not currently support interlaced modes.
@@ -2177,15 +2197,18 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 		 */
 		mode = &hdmi->fbi->monspecs.modedb[i];
 
+		if (fmasks[k] != ~0 && !(mode->flag & fmasks[k]))
+				continue;
+
 		if ((vic = mxc_edid_mode_to_vic(mode, 0)))
 			nvic++;
 
 		// allow detailed timing specification with vic=0 for HDMI
 		// mode
 		if (hdmi->edid_cfg.hdmi_cap &&
-		   (((mode->flag != FB_MODE_IS_DETAILED) && (vic == 0))
+		   ((!(mode->flag & FB_MODE_IS_DETAILED || !mode->flag) && vic == 0)
 				||
-		   (mode->flag == FB_MODE_IS_VESA)))
+		   (mode->flag & FB_MODE_IS_VESA)))
 				continue;
 
 		if (!mode->xres || !mode->refresh)
@@ -2201,7 +2224,7 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 		mode->xres = ALIGN2(mode->xres, 8);
 		mode->yres = ALIGN2(mode->yres, 8);
 
-		if (fb_add_videomode(mode, &hdmi->fbi->modelist))
+		if (mxc_fb_check_existing(mode, vic, &hdmi->fbi->modelist) || fb_add_videomode(mode, &hdmi->fbi->modelist))
 			continue;
 
 		mxc_hdmi_log_modelist(hdmi, mode);
@@ -2245,6 +2268,8 @@ static void mxc_hdmi_edid_rebuild_modelist(struct mxc_hdmi *hdmi)
 			if (hdmi->edid_cfg.hdmi_3d_format[j].struct_3d == 8)
 				mxc_fb_add_videomode(hdmi, mode, &hdmi->fbi->modelist, FB_MODE_IS_3D, FB_VMODE_3D_SBS_HALF);
 		}
+	    }
+	    k++;
 	}
 
 	fb_new_modelist(hdmi->fbi);
