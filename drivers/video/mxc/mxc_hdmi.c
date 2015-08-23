@@ -2496,6 +2496,9 @@ static void hotplug_worker(struct work_struct *work)
 		if (hdmi_phy_pol0 & hdmi->plug_mask) {
 			/* Plugin event */
 			dev_dbg(&hdmi->pdev->dev, "EVENT=plugin\n");
+
+			if (!hdmi->dft_mode_set)
+				hdmi->hp_state = HDMI_HOTPLUG_CONNECTED_NO_EDID;
 			mxc_hdmi_cable_connected(hdmi);
 
 			sprintf(event_string, "EVENT=plugin");
