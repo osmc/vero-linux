@@ -2511,6 +2511,28 @@ fec_enet_set_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 	return 0;
 }
 
+static int fec_enet_get_eee(struct net_device *ndev, struct ethtool_eee *eee)
+{
+	struct fec_enet_private *fep = netdev_priv(ndev);
+	struct phy_device *phydev = fep->phy_dev;
+
+	if (!phydev)
+		return -ENODEV;
+
+	return phy_ethtool_get_eee(phydev, eee);
+}
+
+static int fec_enet_set_eee(struct net_device *ndev, struct ethtool_eee *eee)
+{
+	struct fec_enet_private *fep = netdev_priv(ndev);
+	struct phy_device *phydev = fep->phy_dev;
+
+	if (!phydev)
+		return -ENODEV;
+
+	return phy_ethtool_set_eee(phydev, eee);
+}
+
 static const struct ethtool_ops fec_enet_ethtool_ops = {
 	.get_settings		= fec_enet_get_settings,
 	.set_settings		= fec_enet_set_settings,
@@ -2531,6 +2553,8 @@ static const struct ethtool_ops fec_enet_ethtool_ops = {
 	.set_tunable		= fec_enet_set_tunable,
 	.get_wol		= fec_enet_get_wol,
 	.set_wol		= fec_enet_set_wol,
+	.get_eee		= fec_enet_get_eee,
+	.set_eee		= fec_enet_set_eee,
 };
 
 static int fec_enet_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
