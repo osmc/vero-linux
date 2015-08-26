@@ -533,7 +533,7 @@
 		&pinctrl_hummingboard_usdhc2_200mhz
 	>;
 
-	vmmc-supply = <&reg_usdhc2_vbus>;
+	card-external-vcc-supply = <&reg_usdhc2_vbus>;
 	cd-gpios = <&gpio1 4 0>;
 	status = "okay";
 };
