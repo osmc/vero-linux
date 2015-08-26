@@ -561,7 +561,7 @@ static u32 sd_get_host_max_current(struct mmc_host *host)
 static int sd_set_current_limit(struct mmc_card *card, u8 *status)
 {
 	int current_limit = SD_SET_CURRENT_NO_CHANGE;
-	int err;
+	int i, err;
 	u32 max_current;
 
 	/*
@@ -597,18 +597,23 @@ static int sd_set_current_limit(struct mmc_card *card, u8 *status)
 	else if (max_current >= 200)
 		current_limit = SD_SET_CURRENT_LIMIT_200;
 
-	if (current_limit != SD_SET_CURRENT_NO_CHANGE) {
-		err = mmc_sd_switch(card, 1, 3, current_limit, status);
+	if (current_limit == SD_SET_CURRENT_NO_CHANGE)
+		return 0;
+
+	for (i = current_limit; i >= 0; i--) {
+		err = mmc_sd_switch(card, 1, 3, i, status);
 		if (err)
-			return err;
+			continue;
 
-		if (((status[15] >> 4) & 0x0F) != current_limit)
-			pr_warn("%s: Problem setting current limit!\n",
-				mmc_hostname(card->host));
-
+		if (((status[15] >> 4) & 0x0F) != i) {
+			pr_warning("%s: Problem setting current limit to %d!\n",
+				mmc_hostname(card->host), i);
+		} else {
+			break;
+		}
 	}
 
-	return 0;
+	return err;
 }
 
 /*
