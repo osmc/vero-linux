@@ -2339,26 +2339,28 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi, int edid_status)
 		return;
 	}
 
-	/* If video mode same as previous, init HDMI again */
+	console_lock();
+	fb_blank(hdmi->fbi, FB_BLANK_UNBLANK);
+	console_unlock();
+
 	if (mxc_edid_fb_mode_is_equal(true, &m, mode, ~0) && edid_status == HDMI_EDID_SAME) {
 		dev_dbg(&hdmi->pdev->dev,
 				"%s: Video mode and EDID same as previous\n", __func__);
 		/* update fbi mode in case modelist is updated */
 		hdmi->fbi->mode = (struct fb_videomode *)mode;
 		memcpy(&hdmi->fbi->var, &hdmi->previous_non_vga_mode,
-		       sizeof(struct fb_var_screeninfo));
-		/* update hdmi setting in case EDID data updated  */
+			sizeof(struct fb_var_screeninfo));
 		mxc_hdmi_setup(hdmi, 0);
-	} else if (mxc_edid_fb_mode_is_equal(true, &m, mode, ~0)) {
+	} else if (mxc_edid_fb_mode_is_equal(true, &m, mode, ~0) && edid_status != HDMI_EDID_SAME) {
 		dev_dbg(&hdmi->pdev->dev,
-				"%s: Video mode same as previous\n", __func__);
+				"%s: Video mode same as previous, EDID changed\n", __func__);
 		/* update fbi mode in case modelist is updated */
 		hdmi->fbi->mode = (struct fb_videomode *)mode;
 		dump_fb_videomode(hdmi->fbi->mode);
 		memcpy(&hdmi->fbi->var, &hdmi->previous_non_vga_mode,
 		       sizeof(struct fb_var_screeninfo));
 		mxc_hdmi_notify_fb(hdmi);
-	} else {
+	} else if (edid_status != HDMI_EDID_SAME) {
 		dev_dbg(&hdmi->pdev->dev, "%s: New video mode\n", __func__);
 		fb_videomode_to_var(&hdmi->fbi->var, mode);
 		dump_fb_videomode((struct fb_videomode *)mode);
@@ -2374,10 +2376,6 @@ static void mxc_hdmi_cable_connected(struct mxc_hdmi *hdmi)
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
 	hdmi->hp_state = HDMI_HOTPLUG_CONNECTED_NO_EDID;
-
-	console_lock();
-	fb_blank(hdmi->fbi, FB_BLANK_UNBLANK);
-	console_unlock();
 
 	/* HDMI Initialization Step C */
 
@@ -2826,8 +2824,9 @@ static int mxc_hdmi_fb_event(struct notifier_block *nb,
 			/* Unmute interrupts */
 			hdmi_writeb(~hdmi->plug_event, HDMI_IH_MUTE_PHY_STAT0);
 
-			mxc_hdmi_setup(hdmi, val);
 			hdmi_set_blank_state(1);
+			if (check_hdmi_state())
+				mxc_hdmi_setup(hdmi, val);
 
 		} else if (*((int *)event->data) != hdmi->blank) {
 			dev_dbg(&hdmi->pdev->dev,
