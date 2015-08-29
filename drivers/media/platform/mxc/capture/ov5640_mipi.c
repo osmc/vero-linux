@@ -2001,7 +2001,7 @@ static ssize_t set_reg(struct device *dev,
 	}
 	return count;
 }
-static DEVICE_ATTR(ov5640_reg, S_IRUGO|S_IWUGO, show_reg, set_reg);
+static DEVICE_ATTR(ov5640_reg, S_IRUGO|S_IWUSR|S_IWGRP, show_reg, set_reg);
 
 /*!
  * ov5640 I2C probe function
