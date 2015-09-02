@@ -2344,12 +2344,12 @@ gckKERNEL_Dispatch(
             case gcvSYNC_POINT_DESTROY:
                 syncPoint = gcmUINT64_TO_PTR(Interface->u.SyncPoint.syncPoint);
 
-                gcmkONERROR(gckOS_DestroySyncPoint(Kernel->os, syncPoint));
-
                 gcmkVERIFY_OK(
                     gckKERNEL_RemoveProcessDB(Kernel,
                                               processID, gcvDB_SYNC_POINT,
                                               syncPoint));
+
+                gcmkONERROR(gckOS_DestroySyncPoint(Kernel->os, syncPoint));
                 break;
 
             default:
