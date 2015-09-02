@@ -2129,7 +2129,7 @@ gckCOMMAND_Commit(
     }
 
     /* Submit events. */
-    status = gckEVENT_Submit(Command->kernel->eventObj, gcvTRUE, gcvFALSE);
+    status = gckEVENT_Submit(Command->kernel->eventObj, gcvTRUE, gcvFALSE, gcvTRUE);
     if (status == gcvSTATUS_INTERRUPTED)
     {
         gcmkTRACE(
@@ -2541,7 +2541,7 @@ gckCOMMAND_Stall(
     gcmkONERROR(gckEVENT_Signal(eventObject, signal, gcvKERNEL_PIXEL));
 
     /* Submit the event queue. */
-    gcmkONERROR(gckEVENT_Submit(eventObject, gcvTRUE, FromPower));
+    gcmkONERROR(gckEVENT_Submit(eventObject, gcvTRUE, FromPower, gcvFALSE));
 
 #if gcdDUMP_COMMAND
     gcmkPRINT("@[kernel.stall]");

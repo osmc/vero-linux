@@ -429,7 +429,7 @@ _SubmitTimerFunction(
     )
 {
     gckEVENT event = (gckEVENT)Data;
-    gcmkVERIFY_OK(gckEVENT_Submit(event, gcvTRUE, gcvFALSE));
+    gcmkVERIFY_OK(gckEVENT_Submit(event, gcvTRUE, gcvFALSE, gcvFALSE));
 }
 
 /******************************************************************************\
@@ -1533,7 +1533,8 @@ gceSTATUS
 gckEVENT_Submit(
     IN gckEVENT Event,
     IN gctBOOL Wait,
-    IN gctBOOL FromPower
+    IN gctBOOL FromPower,
+    IN gctBOOL FromCommand
     )
 {
     gceSTATUS status;
@@ -1684,7 +1685,8 @@ gckEVENT_Submit(
         gcmkONERROR(gckCOMMAND_ExitCommit(command, FromPower));
 
 #if !gcdNULL_DRIVER
-        gcmkVERIFY_OK(_TryToIdleGPU(Event));
+        if (!FromCommand)
+            gcmkVERIFY_OK(_TryToIdleGPU(Event));
 #endif
     }
 
@@ -1815,7 +1817,7 @@ gckEVENT_Commit(
     }
 
     /* Submit the event list. */
-    gcmkONERROR(gckEVENT_Submit(Event, gcvTRUE, gcvFALSE));
+    gcmkONERROR(gckEVENT_Submit(Event, gcvTRUE, gcvFALSE, gcvFALSE));
 
     /* Success */
     gcmkFOOTER_NO();
@@ -2494,11 +2496,6 @@ gckEVENT_Notify(
                        "Handled interrupt 0x%x", mask);
     }
 
-    if (IDs == 0)
-    {
-        gcmkONERROR(_TryToIdleGPU(Event));
-    }
-
     /* Success. */
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
@@ -2684,7 +2681,7 @@ gckEVENT_Stop(
     gcmkVERIFY_OBJECT(Event, gcvOBJ_EVENT);
 
     /* Submit the current event queue. */
-    gcmkONERROR(gckEVENT_Submit(Event, gcvTRUE, gcvFALSE));
+    gcmkONERROR(gckEVENT_Submit(Event, gcvTRUE, gcvFALSE, gcvFALSE));
 
     /* Allocate a record. */
     gcmkONERROR(gckEVENT_AllocateRecord(Event, gcvTRUE, &record));

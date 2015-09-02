@@ -2614,7 +2614,7 @@ gckKERNEL_AttachProcessEx(
         if (Kernel->vg == gcvNULL)
 #endif
         {
-            status = gckEVENT_Submit(Kernel->eventObj, gcvTRUE, gcvFALSE);
+            status = gckEVENT_Submit(Kernel->eventObj, gcvTRUE, gcvFALSE, gcvFALSE);
 
             if (status == gcvSTATUS_INTERRUPTED && Kernel->eventObj->submitTimer)
             {
