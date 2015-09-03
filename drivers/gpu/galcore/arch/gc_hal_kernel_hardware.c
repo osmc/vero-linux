@@ -4399,7 +4399,7 @@ gckHARDWARE_SetPowerManagementState(
     if (broadcast)
     {
         /* Try to acquire the power mutex. */
-        status = gckOS_AcquireMutex(os, Hardware->powerMutex, 0);
+        status = gckOS_AcquireMutex(os, Hardware->powerMutex, 1);
 
         if (status == gcvSTATUS_TIMEOUT)
         {
@@ -4590,6 +4590,15 @@ gckHARDWARE_SetPowerManagementState(
     {
         if (State == gcvPOWER_OFF || State == gcvPOWER_SUSPEND || State == gcvPOWER_IDLE)
         {
+            gctBOOL idle;
+            /* Check for idle. */
+            gcmkONERROR(gckHARDWARE_QueryIdle(Hardware, &idle));
+
+            if (!idle)
+            {
+                gcmkONWARNING(gcvSTATUS_CHIP_NOT_READY);
+            }
+
             /* Acquire the global semaphore if it has not been acquired. */
             status = gckOS_TryAcquireSemaphore(os, Hardware->globalSemaphore);
             if (status == gcvSTATUS_OK)
