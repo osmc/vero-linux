@@ -5861,7 +5861,7 @@ gckOS_AcquireSemaphore(
     /* Acquire the semaphore. */
     if (down_interruptible((struct semaphore *) Semaphore))
     {
-        gcmkONERROR(gcvSTATUS_INTERRUPTED);
+        gcmkONWARNING(gcvSTATUS_INTERRUPTED);
     }
 
     /* Success. */

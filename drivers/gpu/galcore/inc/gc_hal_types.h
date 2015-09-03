@@ -453,6 +453,8 @@ typedef enum _gceSTATUS
 
     /* Recompilation Errors */
     gcvSTATUS_RECOMPILER_CONVERT_UNIMPLEMENTED  =   -3000,
+
+    gcvSTATUS_WARNING                           =   -9999,
 }
 gceSTATUS;
 
@@ -463,6 +465,7 @@ gceSTATUS;
 #define gcmIS_ERROR(status)         (status < 0)
 #define gcmNO_ERROR(status)         (status >= 0)
 #define gcmIS_SUCCESS(status)       (status == gcvSTATUS_OK)
+#define gcmIS_WARNING(status)       (status == gcvSTATUS_WARNING)
 
 /******************************************************************************\
 ********************************* Field Macros *********************************

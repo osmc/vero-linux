@@ -4436,6 +4436,53 @@ gckOS_DebugStatus2Name(
 #define gcmERR_RETURN(func)         _gcmERR_RETURN(gcm, func)
 #define gcmkERR_RETURN(func)        _gcmkERR_RETURN(gcmk, func)
 
+/*******************************************************************************
+**
+**  gcmONWARNING
+**
+**      Jump to the error handler in case there is an error, but only report at
+**      the WARNING debug level.  This is for non fatal errors.
+**
+**  ASSUMPTIONS:
+**
+**      'status' variable of gceSTATUS type must be defined.
+**
+**  ARGUMENTS:
+**
+**      func    Function to evaluate.
+*/
+#define _gcmONWARNING(prefix, func) \
+    do \
+    { \
+        status = func; \
+        if (gcmIS_ERROR(status)) \
+        { \
+            prefix##PRINT_VERSION(); \
+            prefix##TRACE(gcvLEVEL_WARNING, \
+                #prefix "ONWARNING: status=%d(%s) @ %s(%d)", \
+                status, gcoOS_DebugStatus2Name(status), __FUNCTION__, __LINE__); \
+            status = gcvSTATUS_WARNING; \
+            goto OnError; \
+        } \
+    } \
+    while (gcvFALSE)
+#define _gcmkONWARNING(prefix, func) \
+    do \
+    { \
+        status = func; \
+        if (gcmIS_WARNING(status)) \
+        { \
+            prefix##PRINT_VERSION(); \
+            prefix##TRACE(gcvLEVEL_WARNING, \
+                #prefix "ONWARNING: status=%d(%s) @ %s(%d)", \
+                status, gckOS_DebugStatus2Name(status), __FUNCTION__, __LINE__); \
+            status = gcvSTATUS_WARNING; \
+            goto OnError; \
+        } \
+    } \
+    while (gcvFALSE)
+#define gcmONWARNING(func)            _gcmONWARNING(gcm, func)
+#define gcmkONWARNING(func)           _gcmkONWARNING(gcmk, func)
 
 /*******************************************************************************
 **
@@ -4455,7 +4502,15 @@ gckOS_DebugStatus2Name(
     do \
     { \
         status = func; \
-        if (gcmIS_ERROR(status)) \
+        if (gcmIS_WARNING(status)) \
+        { \
+            prefix##PRINT_VERSION(); \
+            prefix##TRACE(gcvLEVEL_WARNING, \
+                #prefix "ONWARNING: status=%d(%s) @ %s(%d)", \
+                status, gcoOS_DebugStatus2Name(status), __FUNCTION__, __LINE__); \
+            goto OnError; \
+        } \
+        else if (gcmIS_ERROR(status)) \
         { \
             prefix##PRINT_VERSION(); \
             prefix##TRACE(gcvLEVEL_ERROR, \
@@ -4469,7 +4524,15 @@ gckOS_DebugStatus2Name(
     do \
     { \
         status = func; \
-        if (gcmIS_ERROR(status)) \
+        if (gcmIS_WARNING(status)) \
+        { \
+            prefix##PRINT_VERSION(); \
+            prefix##TRACE(gcvLEVEL_WARNING, \
+                #prefix "ONWARNING: status=%d(%s) @ %s(%d)", \
+                status, gckOS_DebugStatus2Name(status), __FUNCTION__, __LINE__); \
+            goto OnError; \
+        } \
+        else if (gcmIS_ERROR(status)) \
         { \
             prefix##PRINT_VERSION(); \
             prefix##TRACE(gcvLEVEL_ERROR, \
