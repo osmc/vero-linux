@@ -4399,7 +4399,7 @@ gckHARDWARE_SetPowerManagementState(
     if (broadcast)
     {
         /* Try to acquire the power mutex. */
-        status = gckOS_AcquireMutex(os, Hardware->powerMutex, 1);
+        status = gckOS_AcquireMutex(os, Hardware->powerMutex, 0);
 
         if (status == gcvSTATUS_TIMEOUT)
         {
@@ -4417,8 +4417,8 @@ gckHARDWARE_SetPowerManagementState(
                 /* Called from IST,
                 ** so waiting here will cause deadlock,
                 ** if lock holder call gckCOMMAND_Stall() */
-                status = gcvSTATUS_INVALID_REQUEST;
-                goto OnError;
+                gcmkFOOTER_NO();
+                return gcvSTATUS_OK;
             }
             else
             {

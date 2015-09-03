@@ -195,8 +195,7 @@ _TryToIdleGPU(
 )
 {
     gceSTATUS status;
-    gctBOOL empty = gcvFALSE, idle = gcvFALSE;
-    gctBOOL powerLocked = gcvFALSE;
+    gctBOOL empty = gcvFALSE;
     gckHARDWARE hardware;
 
     gcmkHEADER_ARG("Event=0x%x", Event);
@@ -213,38 +212,16 @@ _TryToIdleGPU(
 
     if (empty)
     {
-        status = gckOS_AcquireMutex(hardware->os, hardware->powerMutex, 0);
-        if (status == gcvSTATUS_TIMEOUT)
-        {
-            gcmkFOOTER_NO();
-            return gcvSTATUS_OK;
-        }
-
-        powerLocked = gcvTRUE;
-
-        /* Query whether the hardware is idle. */
-        gcmkONERROR(gckHARDWARE_QueryIdle(Event->kernel->hardware, &idle));
-
-        gcmkONERROR(gckOS_ReleaseMutex(hardware->os, hardware->powerMutex));
-        powerLocked = gcvFALSE;
-
-        if (idle)
-        {
-            /* Inform the system of idle GPU. */
-            gcmkONERROR(gckOS_Broadcast(Event->os,
-                                        Event->kernel->hardware,
-                                        gcvBROADCAST_GPU_IDLE));
-        }
+        /* Inform the system of idle GPU. */
+        gcmkONERROR(gckOS_Broadcast(Event->os,
+                                    Event->kernel->hardware,
+                                    gcvBROADCAST_GPU_IDLE));
     }
 
     gcmkFOOTER_NO();
     return gcvSTATUS_OK;
 
 OnError:
-    if (powerLocked)
-    {
-        gcmkONERROR(gckOS_ReleaseMutex(hardware->os, hardware->powerMutex));
-    }
 
     gcmkFOOTER();
     return status;
@@ -2494,6 +2471,11 @@ gckEVENT_Notify(
 
         gcmkTRACE_ZONE(gcvLEVEL_VERBOSE, gcvZONE_EVENT,
                        "Handled interrupt 0x%x", mask);
+    }
+
+    if (IDs == 0)
+    {
+        gcmkONERROR(_TryToIdleGPU(Event));
     }
 
     /* Success. */
