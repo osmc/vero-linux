@@ -147,18 +147,24 @@ _IncrementCommitAtom(
     hardware = Command->kernel->hardware;
     gcmkVERIFY_OBJECT(hardware, gcvOBJ_HARDWARE);
 
-    /* Grab the power mutex. */
-    gcmkONERROR(gckOS_AcquireMutex(
-        Command->os, hardware->powerMutex, gcvINFINITE
-        ));
-    powerAcquired = gcvTRUE;
-
     /* Increment the commit atom. */
     if (Increment)
     {
+        /* Grab the power mutex. */
+        gcmkONERROR(gckOS_AcquireMutex(
+            Command->os, hardware->powerMutex, gcvINFINITE
+            ));
+        powerAcquired = gcvTRUE;
+
         gcmkONERROR(gckOS_AtomIncrement(
             Command->os, Command->atomCommit, &atomValue
             ));
+
+        /* Release the power mutex. */
+        gcmkONERROR(gckOS_ReleaseMutex(
+            Command->os, hardware->powerMutex
+            ));
+        powerAcquired = gcvFALSE;
     }
     else
     {
@@ -166,12 +172,6 @@ _IncrementCommitAtom(
             Command->os, Command->atomCommit, &atomValue
             ));
     }
-
-    /* Release the power mutex. */
-    gcmkONERROR(gckOS_ReleaseMutex(
-        Command->os, hardware->powerMutex
-        ));
-    powerAcquired = gcvFALSE;
 
     /* Success. */
     gcmkFOOTER();
