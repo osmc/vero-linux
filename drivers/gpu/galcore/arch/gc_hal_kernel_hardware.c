@@ -3859,7 +3859,7 @@ gckHARDWARE_GetIdle(
         if (Wait && !_IsGPUIdle(idle))
         {
             /* Wait a little. */
-            gcmkTRACE_ZONE(gcvLEVEL_INFO, gcvZONE_HARDWARE,
+            gcmkTRACE_ZONE(gcvLEVEL_VERBOSE, gcvZONE_HARDWARE,
                            "%s: Waiting for idle: 0x%08X",
                            __FUNCTION__, idle);
 
@@ -4438,6 +4438,8 @@ gckHARDWARE_SetPowerManagementState(
     if (State == Hardware->chipPowerState)
     {
         gcmkONERROR(gckOS_ReleaseMutex(os, Hardware->powerMutex));
+
+        gcmkFOOTER_NO();
         return gcvSTATUS_OK;
     }
 
@@ -4467,7 +4469,7 @@ gckHARDWARE_SetPowerManagementState(
         /* Release the power mutex. */
         gcmkONERROR(gckOS_ReleaseMutex(os, Hardware->powerMutex));
 
-           gcmkFOOTER_NO();
+        gcmkFOOTER_NO();
         return gcvSTATUS_OK;
 #else
     /* Clock should be on when switch power from off to suspend */
@@ -4537,7 +4539,7 @@ gckHARDWARE_SetPowerManagementState(
             if (State == gcvPOWER_IDLE || State == gcvPOWER_SUSPEND)
             {
                 /* Called from thread routine which should NEVER sleep.*/
-                gcmkONERROR(gcvSTATUS_INVALID_REQUEST);
+                gcmkONWARNING(gcvSTATUS_INVALID_REQUEST);
             }
 
             /* Release the power mutex. */
