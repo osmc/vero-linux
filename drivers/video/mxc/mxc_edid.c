@@ -31,12 +31,7 @@
 #include <video/mxc_edid.h>
 #include "../fbdev/edid.h"
 
-#undef DEBUG  /* define this for verbose EDID parsing output */
-#ifdef DEBUG
-#define DPRINTK(fmt, args...) printk(fmt, ## args)
-#else
-#define DPRINTK(fmt, args...)
-#endif
+#define DPRINTK(fmt, args...) pr_debug(fmt, ## args)
 
 const struct fb_videomode mxc_cea_mode[64] = {
 	/* #1: 640x480p@59.94/60Hz 4:3 */
