@@ -2513,11 +2513,6 @@ gckEVENT_Notify(
                        "Handled interrupt 0x%x", mask);
     }
 
-    if (IDs == 0)
-    {
-        gcmkONERROR(_TryToIdleGPU(Event));
-    }
-
     /* We are out the notify loop. */
     Event->inNotify = gcvFALSE;
 
