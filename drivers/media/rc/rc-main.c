@@ -29,7 +29,7 @@
 #define RC_DEV_MAX	256
 
 /* FIXME: IR_KEYPRESS_TIMEOUT should be protocol specific */
-#define IR_KEYPRESS_TIMEOUT 250
+#define IR_KEYPRESS_TIMEOUT 550
 
 /* Used to keep track of known keymaps */
 static LIST_HEAD(rc_map_list);
