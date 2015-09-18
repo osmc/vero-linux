@@ -65,3 +65,7 @@
 &sgtl5000 {
 	status = "okay";
 };
+
+&rtc {
+	status = "okay";
+};
