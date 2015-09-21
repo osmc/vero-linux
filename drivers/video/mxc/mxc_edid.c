@@ -30,6 +30,7 @@
 #include <linux/fb.h>
 #include <video/mxc_edid.h>
 #include "../fbdev/edid.h"
+#include <linux/firmware.h>
 
 #define DPRINTK(fmt, args...) pr_debug(fmt, ## args)
 
@@ -186,6 +187,9 @@ const struct fb_videomode mxc_cea_mode[64] = {
 		FB_VMODE_NONINTERLACED | FB_VMODE_ASPECT_16_9, 0
 	},
 };
+
+static struct firmware *edid_addr;
+static int offset = 0;
 
 /*
  * We have a special version of fb_mode_is_equal that ignores
@@ -627,6 +631,22 @@ int mxc_edid_parse_ext_blk(unsigned char *edid,
 }
 EXPORT_SYMBOL(mxc_edid_parse_ext_blk);
 
+static int i2c_fake_transfer(struct i2c_adapter *from, struct i2c_msg msg[], int cmsgs)
+{
+	int i;
+	if (!edid_addr)
+		return i2c_transfer(from, msg, cmsgs);
+
+	for (i = 0; i < cmsgs && (offset + EDID_LENGTH <= edid_addr->size); i++) {
+		if (msg[i].flags == I2C_M_RD) {
+			memcpy(msg[i].buf, edid_addr->data + offset, msg[i].len);
+			offset += EDID_LENGTH;
+		}
+	}
+	return cmsgs;
+}
+#define i2c_transfer i2c_fake_transfer
+
 static int mxc_edid_readblk(struct i2c_adapter *adp,
 		unsigned short addr, unsigned char *edid)
 {
@@ -759,6 +779,8 @@ int mxc_edid_read(struct i2c_adapter *adp, unsigned short addr,
 	if (!adp || !edid || !cfg || !fbi)
 		return -EINVAL;
 
+	edid_addr = cfg->ext_edid;
+	offset = 0;
 	memset(edid, 0, EDID_LENGTH*4);
 	memset(cfg, 0, sizeof(struct mxc_edid_cfg));
 
@@ -785,10 +807,15 @@ int mxc_edid_read(struct i2c_adapter *adp, unsigned short addr,
 				return ret;
 		}
 
-		for (i = 1; i <= extblknum; i++)
+		for (i = 1; i <= extblknum; i++) {
 			/* edid ext block parsing */
-			mxc_edid_parse_ext_blk(edid + i*EDID_LENGTH,
+			ret = mxc_edid_parse_ext_blk(edid + i*EDID_LENGTH,
 					cfg, &fbi->monspecs);
+			if (ret < 0) {
+				fb_edid_add_monspecs(edid + i*EDID_LENGTH, &fbi->monspecs);
+				return ret;
+			}
+		}
 	}
 
 	return 0;

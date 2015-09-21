@@ -96,6 +96,8 @@ struct mxc_edid_cfg {
 	u8 sample_sizes[4];
 	u8 sample_rates[4];
 	u8 speaker_alloc;
+
+	const struct firmware *ext_edid;
 };
 
 static inline unsigned long mxcPICOS2KHZ(u32 pixclock, u32 vmode) {
