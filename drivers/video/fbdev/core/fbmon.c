@@ -494,38 +494,12 @@ static int get_est_timing(unsigned char *block, struct fb_videomode *mode)
 static int get_std_timing(unsigned char *block, struct fb_videomode *mode,
 			  int ver, int rev, const struct fb_monspecs *specs)
 {
-	int xres, yres = 0, ratio, i;
+	int i;
 
 	for (i = 0; i < DMT_SIZE; i++) {
 		u32 std_2byte_code = block[0] << 8 | block[1];
 		if (std_2byte_code == dmt_modes[i].std_2byte_code)
 			break;
-	}
-
-	ratio = (block[1] & 0xc0) >> 6;
-	switch (ratio) {
-	case 0:
-		/* in EDID 1.3 the meaning of 0 changed to 16:10 (prior 1:1) */
-		if (ver < 1 || (ver == 1 && rev < 3)) {
-			yres = xres;
-			mode->vmode &= FB_VMODE_ASPECT_1;
-		} else {
-			yres = (xres * 10)/16;
-			mode->vmode &= FB_VMODE_ASPECT_16_10;
-		}
-		break;
-	case 1:
-		yres = (xres * 3)/4;
-		mode->vmode &= FB_VMODE_ASPECT_4_3;
-		break;
-	case 2:
-		yres = (xres * 4)/5;
-		mode->vmode &= FB_VMODE_ASPECT_5_4;
-		break;
-	case 3:
-		yres = (xres * 9)/16;
-		mode->vmode &= FB_VMODE_ASPECT_16_9;
-		break;
 	}
 
 	if (i < DMT_SIZE && dmt_modes[i].mode) {
@@ -545,19 +519,25 @@ static int get_std_timing(unsigned char *block, struct fb_videomode *mode,
 		switch (ratio) {
 		case 0:
 			/* in EDID 1.3 the meaning of 0 changed to 16:10 (prior 1:1) */
-			if (ver < 1 || (ver == 1 && rev < 3))
+			if (ver < 1 || (ver == 1 && rev < 3)) {
 				yres = xres;
-			else
+				mode->vmode |= FB_VMODE_ASPECT_1;
+			} else {
 				yres = (xres * 10)/16;
+				mode->vmode |= FB_VMODE_ASPECT_16_10;
+			}
 			break;
 		case 1:
 			yres = (xres * 3)/4;
+			mode->vmode |= FB_VMODE_ASPECT_4_3;
 			break;
 		case 2:
 			yres = (xres * 4)/5;
+			mode->vmode |= FB_VMODE_ASPECT_5_4;
 			break;
 		case 3:
 			yres = (xres * 9)/16;
+			mode->vmode |= FB_VMODE_ASPECT_16_9;
 			break;
 		}
 		refresh = (block[1] & 0x3f) + 60;
