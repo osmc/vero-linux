@@ -1971,11 +1971,6 @@ static int mxc_hdmi_read_edid(struct mxc_hdmi *hdmi)
 	if (ret < 0)
 		return HDMI_EDID_FAIL;
 
-	dev_info(&hdmi->pdev->dev, "%s reports %s mode\n", __func__, hdmi->edid_cfg.hdmi_cap?"HDMI":"DVI");
-	hdmi->hp_state = hdmi->edid_cfg.hdmi_cap?HDMI_HOTPLUG_CONNECTED_HDMI:HDMI_HOTPLUG_CONNECTED_DVI;
-	hdmi->plug_event = hdmi->edid_cfg.hdmi_cap?HDMI_IH_PHY_STAT0_HPD:HDMI_DVI_IH_STAT;
-	hdmi->plug_mask = hdmi->edid_cfg.hdmi_cap?HDMI_PHY_HPD:HDMI_DVI_STAT;
-
 	if (!memcmp(edid_old, hdmi->edid, HDMI_EDID_LEN)) {
 		dev_info(&hdmi->pdev->dev, "same edid\n");
 		return HDMI_EDID_SAME;
@@ -2304,8 +2299,7 @@ static void  mxc_hdmi_default_edid_cfg(struct mxc_hdmi *hdmi)
 static void  mxc_hdmi_default_modelist(struct mxc_hdmi *hdmi)
 {
 	u32 i;
-	const struct fb_videomode *mode;
-	struct fb_videomode m;
+	struct fb_videomode mode;
 
 	dev_dbg(&hdmi->pdev->dev, "%s\n", __func__);
 
@@ -2317,14 +2311,16 @@ static void  mxc_hdmi_default_modelist(struct mxc_hdmi *hdmi)
 
 	fb_destroy_modelist(&hdmi->fbi->modelist);
 
-	fb_var_to_videomode(&m, &hdmi->fbi->var);
-	fb_add_videomode(&m, &hdmi->fbi->modelist);
+	fb_var_to_videomode(&mode, &hdmi->fbi->var);
+	fb_add_videomode(&mode, &hdmi->fbi->modelist);
 
 	/*Add all no interlaced CEA mode to default modelist */
 	for (i = 0; i < ARRAY_SIZE(mxc_cea_mode); i++) {
-		mode = &mxc_cea_mode[i];
-		if (mode->xres != 0)
-			fb_add_videomode(mode, &hdmi->fbi->modelist);
+		mode = mxc_cea_mode[i];
+		if (mode.xres != 0) {
+			mode.flag |= FB_MODE_IS_STANDARD;
+			fb_add_videomode(&mode, &hdmi->fbi->modelist);
+		}
 	}
 
 	fb_new_modelist(hdmi->fbi);
@@ -2442,6 +2438,11 @@ static void mxc_hdmi_cable_connected_worker(struct work_struct *work)
 		mxc_hdmi_default_modelist(hdmi);
 		break;
 	}
+
+	dev_info(&hdmi->pdev->dev, "%s reports %s mode\n", __func__, hdmi->edid_cfg.hdmi_cap ? "HDMI" : "DVI");
+	hdmi->hp_state   = hdmi->edid_cfg.hdmi_cap ? HDMI_HOTPLUG_CONNECTED_HDMI : HDMI_HOTPLUG_CONNECTED_DVI;
+	hdmi->plug_event = hdmi->edid_cfg.hdmi_cap ? HDMI_IH_PHY_STAT0_HPD       : HDMI_DVI_IH_STAT;
+	hdmi->plug_mask  = hdmi->edid_cfg.hdmi_cap ? HDMI_PHY_HPD                : HDMI_DVI_STAT;
 
 	/* Save edid cfg for audio driver */
 	hdmi_set_edid_cfg(edid_status, &hdmi->edid_cfg);
