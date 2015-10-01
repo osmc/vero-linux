@@ -586,13 +586,6 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	for (i = 0; i < ARRAY_SIZE(clks_init_on); i++)
 		imx_clk_prepare_enable(clk[clks_init_on[i]]);
 
-	imx_clk_set_parent(clk[IMX6QDL_CLK_VPU_AXI_SEL], clk[IMX6QDL_CLK_PLL2_PFD0_352M]);
-
-	if (cpu_is_imx6dl())
-		imx_clk_set_rate(clk[IMX6QDL_CLK_PLL2_PFD0_352M], 306000000);
-	else
-		imx_clk_set_rate(clk[IMX6QDL_CLK_PLL2_PFD0_352M], 327000000);
-
 	/*
 	 * If VPU 352M is enabled, then PLL2_PDF2 need to be
 	 * set to 352M, cpufreq will be disabled as VDDSOC/PU
@@ -604,6 +597,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	 */
 	if (vpu352) {
 		imx_clk_set_rate(clk[IMX6QDL_CLK_PLL2_PFD0_352M], 352000000);
+		imx_clk_set_parent(clk[IMX6QDL_CLK_VPU_AXI_SEL], clk[IMX6QDL_CLK_PLL2_PFD0_352M]);
 		pr_info("VPU 352M is enabled!\n");
 	}
 }
