@@ -401,7 +401,7 @@ static const struct mxc_hdmi_ctsn mxc_hdmi_ctsn_tbl[] = {
 	{148500, { { 32000, 4096, 148500 }, { 44100,  6272, 165000 }, { 48000,  6144, 148500 } } }, /* 148.50       MHz */
 };
 
-static bool hdmi_compute_cts_n(unsigned int freq, unsigned long pixel_clk,
+static void hdmi_compute_cts_n(unsigned int freq, unsigned long pixel_clk,
 				   unsigned int *N, unsigned int *CTS)
 {
 	int n, cts;
@@ -428,13 +428,12 @@ static bool hdmi_compute_cts_n(unsigned int freq, unsigned long pixel_clk,
 
 	/* Check that we are in spec (not always possible) */
 	if (n < (128*freq/1500))
-		pr_warn("%s: calculated ACR N value is too small. Audio might not work correctly.\n", __func__);
+		pr_warn("%s: calculated ACR N value is too small. You may experience audio problems.\n", __func__);
 	if (n > (128*freq/300))
-		pr_warn("%s: calculated ACR N value is too large. Audio might not work correctly.\n", __func__);
+		pr_warn("%s: calculated ACR N value is too large. You may experience audio problems.\n", __func__);
 
 	*N = n;
 	*CTS = cts;
-	return true;
 }
 
 static void hdmi_lookup_cts_n(unsigned int freq, unsigned long pixel_clk,
@@ -485,13 +484,10 @@ static void hdmi_set_clk_regenerator(void)
 
 	hdmi_lookup_cts_n(sample_rate, pixel_clk_rate, &clk_n, &clk_cts);
 
-	if (clk_cts == 0 && hdmi_compute_cts_n(sample_rate, pixel_clk_rate, &clk_n, &clk_cts))
+	if (clk_cts == 0) {
 		pr_debug("%s: pixel clock not supported - using fallback calculation.\n", __func__);
-	else if (clk_cts == 0) {
-		mxc_hdmi_abort_stream();
-		return;
+		hdmi_compute_cts_n(sample_rate, pixel_clk_rate, &clk_n, &clk_cts);
 	}
-
 	if (hdmi_ratio != 100)
 		clk_cts = (clk_cts * hdmi_ratio) / 100;
 
