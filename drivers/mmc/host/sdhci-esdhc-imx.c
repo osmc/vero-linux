@@ -659,21 +659,7 @@ static inline void esdhc_pltfm_set_clock(struct sdhci_host *host,
 
 static unsigned int esdhc_pltfm_get_ro(struct sdhci_host *host)
 {
-	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
-	struct pltfm_imx_data *imx_data = pltfm_host->priv;
-	struct esdhc_platform_data *boarddata = &imx_data->boarddata;
-
-	switch (boarddata->wp_type) {
-	case ESDHC_WP_GPIO:
-		return mmc_gpio_get_ro(host->mmc);
-	case ESDHC_WP_CONTROLLER:
-		return !(readl(host->ioaddr + SDHCI_PRESENT_STATE) &
-			       SDHCI_WRITE_PROTECT);
-	case ESDHC_WP_NONE:
-		break;
-	}
-
-	return -ENOSYS;
+	return 0;
 }
 
 static void esdhc_pltfm_set_bus_width(struct sdhci_host *host, int width)
