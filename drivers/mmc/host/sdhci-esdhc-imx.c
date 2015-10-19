@@ -141,7 +141,9 @@ static struct esdhc_soc_data esdhc_imx53_data = {
 };
 
 static struct esdhc_soc_data usdhc_imx6q_data = {
-	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_MAN_TUNING,
+	.flags = ESDHC_FLAG_USDHC
+			| ESDHC_FLAG_ERR004536 
+			| ESDHC_FLAG_MAN_TUNING,
 };
 
 static struct esdhc_soc_data usdhc_imx6sl_data = {
