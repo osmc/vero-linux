@@ -1006,6 +1006,7 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 		writel(0x08100810, host->ioaddr + ESDHC_WTMK_LVL);
 		host->quirks2 |= SDHCI_QUIRK2_PRESET_VALUE_BROKEN;
 		host->mmc->caps |= MMC_CAP_1_8V_DDR;
+		host->quirks2 |= SDHCI_QUIRK2_BROKEN_HS200;
 
 		/*
 		 * errata ESDHC_FLAG_ERR004536 fix for MX6Q TO1.2 and MX6DL
