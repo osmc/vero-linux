@@ -596,8 +596,7 @@ static void __init imx6q_clocks_init(struct device_node *ccm_node)
 	 * be impacted.
 	 */
 	if (vpu352) {
-		imx_clk_set_rate(clk[IMX6QDL_CLK_PLL2_PFD0_352M], 352000000);
-		imx_clk_set_parent(clk[IMX6QDL_CLK_VPU_AXI_SEL], clk[IMX6QDL_CLK_PLL2_PFD0_352M]);
+		imx_clk_set_rate(clk[IMX6QDL_CLK_PLL2_PFD0_352M], 306000000);
 		pr_info("VPU 352M is enabled!\n");
 	}
 }
