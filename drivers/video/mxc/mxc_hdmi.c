@@ -2350,8 +2350,11 @@ static void mxc_hdmi_set_mode(struct mxc_hdmi *hdmi, int edid_status)
 		dev_dbg(&hdmi->pdev->dev,
 				"xBuffer not active, trying new best display mode\n");
 		mode = fb_find_best_display(&hdmi->fbi->monspecs, &hdmi->fbi->modelist);
-		fb_videomode_to_var(&var, mode);
-		var.vmode &= (FB_VMODE_ASPECT_MASK | FB_VMODE_MASK_SIMPLE);
+		if (mode) {
+			fb_videomode_to_var(&var, mode);
+			var.vmode &= (FB_VMODE_ASPECT_MASK | FB_VMODE_MASK_SIMPLE);
+		} else
+			dev_err(&hdmi->pdev->dev, "No fb_find_best_display returned\n");
 	}
 
 	fb_var_to_videomode(&m, &var);
