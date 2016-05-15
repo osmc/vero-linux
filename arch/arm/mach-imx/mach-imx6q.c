@@ -43,7 +43,7 @@
 
 static struct fec_platform_data fec_pdata;
 static int ar803x_smarteee = 0;
-static int oc = 0;
+static int oc = 1;
 
 static int __init ar803x_smarteee_setup(char *__unused)
 {
