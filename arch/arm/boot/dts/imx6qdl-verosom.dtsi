@@ -45,6 +45,7 @@
 	clk_sdio: sdio-clock {
 		compatible = "gpio-gate-clock";
 		#clock-cells = <0>;
+		clocks = <>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_verosom_brcm_osc>;
 		enable-gpios = <&gpio5 5 GPIO_ACTIVE_HIGH>;
