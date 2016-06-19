@@ -136,6 +136,7 @@
 #define ESDHC_FLAG_HS200		BIT(8)
 /* The IP supports HS400 mode */
 #define ESDHC_FLAG_HS400		BIT(9)
+#define ESDHC_FLAG_TUNING_WORK_AROUND	BIT(10)
 
 /* A higher clock ferquency than this rate requires strobell dll control */
 #define ESDHC_STROBE_DLL_CLK_FREQ	100000000
@@ -161,7 +162,8 @@ static struct esdhc_soc_data esdhc_imx53_data = {
 };
 
 static struct esdhc_soc_data usdhc_imx6q_data = {
-	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_MAN_TUNING,
+	.flags = ESDHC_FLAG_USDHC | ESDHC_FLAG_MAN_TUNING
+			| ESDHC_FLAG_TUNING_WORK_AROUND,
 };
 
 static struct esdhc_soc_data usdhc_imx6sl_data = {
@@ -1016,6 +1018,9 @@ sdhci_esdhc_imx_probe_dt(struct platform_device *pdev,
 
 	if (!IS_ERR_VALUE(mmc_gpio_get_cd(host->mmc)))
 		host->quirks &= ~SDHCI_QUIRK_BROKEN_CARD_DETECTION;
+
+	if (imx_data->socdata->flags & ESDHC_FLAG_TUNING_WORK_AROUND)
+		host->quirks2 |= SDHCI_QUIRK2_TUNING_WORK_AROUND;
 
 	return 0;
 }
